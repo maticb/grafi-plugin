@@ -28,6 +28,9 @@ Več grafov;
 *		Can also display fitness: [fit, x1]
 * 		Defined as an array, where the first X is numbered as "1": [1,2]  would display a canvas elements containing a graph, showing [x1,x2]
 *		To show multiple combinations define an array of arrays: [[1,2],[2,3]] -> [x1,x2] and [x2,x3]
+* - canvasSize array 	Optional	Defines dimensions of each canvas seperately, or  globally. Dimensions cannot be set
+* 		If only an array of 2 integers is set, that will be considered as the dimension for all canvases: [300,300]
+* 		You can also pass an array of array (Identical in size to the above display array!) that will set dimensions for each canvas seperately
 *
 *	Example configuration of plugin properties:
 
@@ -59,6 +62,7 @@ $.fn.evoAnimate = function(props) {
 	// Non-static private vars
 	var ANIMATION_DATA = {}; // Parsed animation data
 	var CANVAS_ARR = []; // Array of canvases
+	var CANVAS_X_SETTING = []; // Sets which X should be displayed on which canvas
 
 	// Playback
 	var GENERATION_STARTS = []; // Array of indexes where given generation starts e.g.: [0,10,16] would indicate that generation 2 starts on index 10
@@ -502,17 +506,76 @@ $.fn.evoAnimate = function(props) {
 	* Function that checks the given properties and initializes the plugin
 	*/
 	function initialize() {
+		// Source
 		if(!props.hasOwnProperty('source')) {
 			// TODO: friendlier error messages
 			alert('Erorr: Source must be defined!');
 			return false;
 		}
+		//SourceType
 		var sourceType = props.hasOwnProperty('sourceType') ? props.sourceType.toLowerCase() : 'url';
 		if('url' === sourceType) {
 			//TODO: imeplement reading source from URL
 		} else if('string' === sourceType) {
 			ANIMATION_DATA = parseInput(exampleInput);
 		}
+		//Display
+		var display = undefined;
+		if(props.hasOwnProperty('display')) {
+			display = props.display;
+			if($.isArray(display)) {
+				var pass = true;
+				var isArray = false;
+				for(var i in display) {
+					var item = display[i];
+					// Display should always be an array of arrays, make sure that is so here
+					if($.isArray(item)) {
+						isArray = true;
+					} else {
+						pass = false;
+					}
+				}
+				if(pass && isArray)
+					CANVAS_X_SETTING = [display];
+				else if(!isArray)
+					CANVAS_X_SETTING = display;
+				else
+					console.warn('All items within the display array must be arrays.');
+
+			} else {
+				console.warn('The display property should be an array!');
+			}
+
+		}
+		//CanvasSize
+		var canvasSize =[[300,300]];
+		if(props.hasOwnProperty('canvasSize')) {
+			canvasSize = props.canvasSize;
+			if($.isArray(canvasSize)) {
+				var pass = true;
+				var isArray = false;
+				for(var i in canvasSize) {
+					var item = canvasSize[i];
+					// canvasSize should always be an array of arrays, make sure that is so here
+					if($.isArray(item)) {
+						isArray = true;
+					} else {
+						pass = false;
+					}
+				}
+				if(pass && isArray)
+					CANVAS_X_SETTING = [display];
+				else if(!isArray)
+					CANVAS_X_SETTING = display;
+				else
+					console.warn('All items within the canvasSize array must be arrays.');
+
+			} else {
+				console.warn('The canvasSize property should be an array!');
+			}
+
+		}
+		//PlayOnLoad
 		var playOnLoad = props.hasOwnProperty('playOnLoad') ? props.playOnLoad : true;
 		if(playOnLoad) {
 			play();
