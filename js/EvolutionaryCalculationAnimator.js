@@ -52,6 +52,8 @@ $.fn.evoAnimate = function(props) {
 		ctx: undefined,
 		width: 300,
 		height: 300,
+		xIndex: 1, // Index of the algorithm step's X value to be displayed on this canvas's x axis
+		yIndex: 1, // Same for the y axis
 	};
 
 	// Non-static private vars
@@ -68,6 +70,26 @@ $.fn.evoAnimate = function(props) {
 	var PLAY_GEN = 1; // Current generation number
 	var PLAY_STEP = 0; // Current step number
 
+
+	/*
+	* Set problem's range, for proper scaling on the canvas
+	* @param object data 	Object with algorithm data
+	*/
+	function setProblemRange(data) {
+		var min = 9999;
+		var max = -9999;
+		for(var i in data.steps){
+			var step = data.steps[i];
+			for(var j in step.x) {
+				var x = step.x[j];
+				min = x < min ? x : min;
+				max = x > max ? x : max;
+			}
+		}
+		data.problemRange = (max - min);
+		data.problemPadding = data.problemRange * 0.05;
+		data.problemRange *= 1.1; // Add some padding on the edges
+	}
 
 	/*
 	* Parses entire input text (document)
@@ -111,6 +133,8 @@ $.fn.evoAnimate = function(props) {
 		// Reset steps if new data is loaded
 		PLAY_GEN = 1;
 		PLAY_STEP = 0;
+		// Get problem's maximum range
+		setProblemRange(rtrn);
 		return rtrn;
 	}
 
@@ -278,26 +302,34 @@ $.fn.evoAnimate = function(props) {
 	* @param integer 	x 			X coordinate
 	* @param integer 	y 			Y coordinate
 	* @param object 	ctxObj 		Object with canvas data
-	* @param integer 	maxX 		Maximum X coordinate of given problem
-	* @param integer 	maxY 		Maximum Y coordinate of given problem
 	* @param string 	pointColor 	Color of the point to draw
 	* @param string 	lineColor 	Color of the line to draw
 	*/
-	function renderPoint(x, y = 0, ctxObj, maxX, maxY, prevX = 0, prevY = 0,  drawLine = true, pointColor = '#FF0000', lineColor = '#000000') {
+	// TODO: temp draw ID of point
+	function renderPoint(id, x, y = 0, ctxObj, prevX = 0, prevY = 0, prevX1 = 0, prevY1 = 1,  drawLine = true, pointColor = '#FF0000', lineColor = '#000000') {
 		var ctx = ctxObj.ctx;
 		ctx.fillStyle = pointColor;
-		var physicalCoords = coordinateTransform(ctxObj, x, y, maxX, maxY);
+		var physicalCoords = coordinateTransform(ctxObj, x, y);
 		ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
 
 		// Add line from the previously drawn point
 		if(true === drawLine) {
 			ctx.fillStyle = lineColor;
-			var prevCoords = coordinateTransform(ctxObj, prevX, prevY, maxX, maxY);
+			var prevCoords = coordinateTransform(ctxObj, prevX, prevY);
+			var prevCoords1 = coordinateTransform(ctxObj, prevX1, prevY1);
+			// Line to parent 1
 			ctx.beginPath();
 			ctx.moveTo(prevCoords.x, prevCoords.y);
 			ctx.lineTo(physicalCoords.x,physicalCoords.y);
 			ctx.stroke();
+			// Line to parent 2
+			ctx.beginPath();
+			ctx.moveTo(prevCoords1.x, prevCoords1.y);
+			ctx.lineTo(physicalCoords.x,physicalCoords.y);
+			ctx.stroke();
 		}
+		//TODO: temp debug, draw point id:
+		ctx.fillText(id, physicalCoords.x+5, physicalCoords.y+5);
 
 		//Reset color Back to Black #ACDC
 		ctx.fillStyle = '#000000';
@@ -309,6 +341,7 @@ $.fn.evoAnimate = function(props) {
 	* @param integer	genNumber	Generation number
 	*/
 	function stepGen(data, genNumber) {
+		// TODO: Fade points from previous generation!
 		// Calculate the length of the current generation
 		var generationLength = (GENERATION_STARTS.length > genNumber ? GENERATION_STARTS[genNumber] : data.steps.length) - GENERATION_STARTS[genNumber - 1];
 		//Make sure step is set to the start of the generation
@@ -339,7 +372,6 @@ $.fn.evoAnimate = function(props) {
 	*/
 	function step(stepData) {
 		console.log(stepData);
-		// TODO: inlcude both parents in drawing!
 		var parent1 = -1 !== stepData.parentIds[0] ? findStepById(stepData.parentIds[0], stepData.generation - 1) : undefined;
 		var parent2 = -1 !== stepData.parentIds[1] ? findStepById(stepData.parentIds[1], stepData.generation - 1) : undefined;
 		// Loop throught all the x values of the step
@@ -347,17 +379,24 @@ $.fn.evoAnimate = function(props) {
 			var x1 = stepData.x[i];
 			var x2 = stepData.x.length  > i + 1 ? stepData.x[i + 1] : 0;
 			var drawLine = false;
-			var parentx1 = 0, parentx2 = 0;
+			var parentx1 = 0, parenty1 = 0;
+			var parentx2 = 0, parenty2 = 0;
 			if(undefined !== parent1) {
 				drawLine = true;
 				parentx1 = parent1.x[i];
-				parentx2 = parent1.x.length  > i + 1 ? parent1.x[i + 1] : 0;
+				parenty1 = parent1.x.length  > i + 1 ? parent1.x[i + 1] : 0;
+			}
+			if(undefined !== parent2) {
+				drawLine = true;
+				parentx2 = parent2.x[i];
+				parenty2 = parent2.x.length  > i + 1 ? parent2.x[i + 1] : 0;
 			}
 
 			var canvasObj = findCanvasObjForX(i);
 			// TODO: hardcoded problem max X
-			renderPoint(x1, x2,  canvasObj, 10, 10, parentx1, parentx2, drawLine);
+			renderPoint(stepData.id, x1, x2,  canvasObj, parentx1, parenty1, parentx2, parenty2, drawLine);
 		}
+		// Loop throught all canvases, because all caanvases will have a change on every step!
 	}
 	/*
 	* Main animation loop
@@ -451,9 +490,11 @@ $.fn.evoAnimate = function(props) {
 	* @param integer 	maxX 	Maximum value of X for given problem
 	* @param integer 	maxY 	Maximum value of Y for given problem
 	*/
-	function coordinateTransform(ctx, x, y, maxX, maxY) {
-		var newX =  ctx.width / (maxX / x);
-		var newY =  ctx.height / (maxY / y);
+	function coordinateTransform(ctx, x, y) {
+		// TODO: Imeplement negative range (-500 to 500)
+		var newX =  ctx.width / (ANIMATION_DATA.problemRange / x) + ANIMATION_DATA.problemPadding;
+		var newY =  ctx.height / (ANIMATION_DATA.problemRange / y) + ANIMATION_DATA.problemPadding;
+		console.log({x: newX, y: newY});
 		return {x: newX, y: newY};
 	}
 
