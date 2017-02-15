@@ -1,6 +1,6 @@
 // Temporary file for some functions, to prevent clutter in the main plugin file
 // Utils
-var util = {};
+var evolutionUtil = {}; // Prevent overriding widely used "util" variable name
 
 /*
 * Loops over all items of a given string/array and triggers callback if item matches value
@@ -8,7 +8,7 @@ var util = {};
 * @param string/integer	val 		Value to be compared with looped items
 * @param function 		callback 	Callback function, triggered when item is matched with val
 */
-util.indexOfAll = function(str, val, callback) {
+evolutionUtil.indexOfAll = function(str, val, callback) {
 	// Compare value function, in case given value is array
 	function compareVal(val1) {
 		if('object' === typeof val){ // If val is array
@@ -41,7 +41,7 @@ util.indexOfAll = function(str, val, callback) {
 * Universal function that parses array from argument string
 * @param string 	input 		String (JSON) of the given argument
 */
-util.parseArray = function(input){
+evolutionUtil.parseArray = function(input){
 	return JSON.parse(input);
 }
 
@@ -52,7 +52,7 @@ util.parseArray = function(input){
 * @param string 	propName 	Property name
 * @param string 	propType 	Property type
 */
-util.getProp = function(obj, propName, propType = null) {
+evolutionUtil.getProp = function(obj, propName, propType = null) {
 
 	if(obj.hasOwnProperty(propName)) {
 		var rtrn = obj[propName];
@@ -68,6 +68,6 @@ util.getProp = function(obj, propName, propType = null) {
 * Clones object
 * @param object 	obj 		Any given object
 */
-util.clone = function(obj) {
+evolutionUtil.clone = function(obj) {
 	return JSON.parse(JSON.stringify(obj));
 }
