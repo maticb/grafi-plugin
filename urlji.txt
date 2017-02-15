@@ -1,0 +1,4 @@
+https://code.jquery.com/jquery-3.1.0.min.js verzija 3.1.0 23.8.2016
+
+https://software.intel.com/en-us/html5/hub/blogs/request-animation-frame-for-better-performance 10.1.2017
+https://gist.github.com/paulirish/1579671 	10.1.2017
