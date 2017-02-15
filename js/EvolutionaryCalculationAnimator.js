@@ -42,6 +42,7 @@ Več grafov;
 
 
 $.fn.evoAnimate = function(props) {
+	var self = this;
 	// Static plugin private vars
 	var ARGS_NUM = 7; // Number of arguments in the first line of the input (this should never change, unless the format of the input string will change)
 	// Default values
@@ -58,12 +59,14 @@ $.fn.evoAnimate = function(props) {
 	var CANVAS_ARR = []; // Array of canvases
 
 	// Playback
+	var GENERATION_STARTS = []; // Array of indexes where given generation starts e.g.: [0,10,16] would indicate that generation 2 starts on index 10
+	var LAST_GENERATION = 1; // Store number of the last generation
 	var REQUEST_LOOP = undefined; // Request loop
 	var IS_LOADED = false; // Boolean that indicates if any data is loaded (so we can start playback)
 	var IS_PLAYING = false; // Indicates if animation is playing
 	var IS_SETUP = false; // Indicates if canvas and other elements needed have been setup
 	var PLAY_GEN = 1; // Current generation number
-	var PLAY_GEN_STEP = 1; // Step number within current generation
+	var PLAY_STEP = 0; // Current step number
 
 
 	/*
@@ -99,15 +102,15 @@ $.fn.evoAnimate = function(props) {
 			}
 			parseLine(rtrn, item);
 		});
-		// Put steps of same generations in combined arrays, to save compute time on rendering!
-		reOrderStepsIntoGenerations(rtrn);
+		// Find starting points of generations
+		findGenerationStarts(rtrn);
 		// If new data is loaded, canvases must be re-set up
 		IS_SETUP = false;
 		// Data is loaded
 		IS_LOADED  = true;
 		// Reset steps if new data is loaded
 		PLAY_GEN = 1;
-		PLAY_GEN_STEP = 0;
+		PLAY_STEP = 0;
 		return rtrn;
 	}
 
@@ -216,6 +219,243 @@ $.fn.evoAnimate = function(props) {
 		obj.steps.push(lineObj);
 	}
 
+	/*
+	* Finds starting indexes of generations and stores them in an array
+	* @param object 	data 	Input data object
+	*/
+	function findGenerationStarts(data) {
+		//The first generation will always start on 0
+		GENERATION_STARTS.push(0);
+		var currentGen = 1;
+		for(var i in data.steps) {
+			var step = data.steps[i];
+			if(step.generation > currentGen) {
+				GENERATION_STARTS.push(parseInt(i));
+				currentGen++;
+			}
+		}
+		LAST_GENERATION = currentGen - 1;
+	}
+	/*
+	* Check if data is loaded
+	*/
+	function isLoaded() {
+		return true === IS_LOADED ? true : false;
+	}
+
+	/*
+	* Check if animation is playing
+	*/
+	function isPlaying() {
+		return undefined !== REQUEST_LOOP ? true : false;
+	}
+
+	/*
+	* Check if canvases are setup
+	*/
+	function isSetup() {
+		return true === IS_SETUP ? true : false;
+	}
+	/*
+	* Finds  step by id
+	* @param integer 	id 		Id of the step we are searching for
+	*/
+	function findStepById(id) {
+		var steps = ANIMATION_DATA.steps;
+		// Steps are numbered in the data, and should be on this spot
+		if(steps[id - 1].id === id)
+			return steps[id - 1];
+		// If for some reason, steps are not numbered correctly, loop throught and find the correct one
+		for(var i in steps) {
+			var step = steps[i];
+			if(step.id === id)
+				return step;
+		}
+	}
+
+	/*
+	* Show a point on a given canvas
+	* @param integer 	x 			X coordinate
+	* @param integer 	y 			Y coordinate
+	* @param object 	ctxObj 		Object with canvas data
+	* @param integer 	maxX 		Maximum X coordinate of given problem
+	* @param integer 	maxY 		Maximum Y coordinate of given problem
+	* @param string 	pointColor 	Color of the point to draw
+	* @param string 	lineColor 	Color of the line to draw
+	*/
+	function renderPoint(x, y = 0, ctxObj, maxX, maxY, prevX = 0, prevY = 0,  drawLine = true, pointColor = '#FF0000', lineColor = '#000000') {
+		var ctx = ctxObj.ctx;
+		ctx.fillStyle = pointColor;
+		var physicalCoords = coordinateTransform(ctxObj, x, y, maxX, maxY);
+		ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
+
+		// Add line from the previously drawn point
+		if(true === drawLine) {
+			ctx.fillStyle = lineColor;
+			var prevCoords = coordinateTransform(ctxObj, prevX, prevY, maxX, maxY);
+			ctx.beginPath();
+			ctx.moveTo(prevCoords.x, prevCoords.y);
+			ctx.lineTo(physicalCoords.x,physicalCoords.y);
+			ctx.stroke();
+		}
+
+		//Reset color Back to Black #ACDC
+		ctx.fillStyle = '#000000';
+	}
+
+	/*
+	* Performs all steps within one generation
+	* @param object 	data 		Data object for the algorithm we are currently animating
+	* @param integer	genNumber	Generation number
+	*/
+	function stepGen(data, genNumber) {
+		// Calculate the length of the current generation
+		var generationLength = (GENERATION_STARTS.length > genNumber ? GENERATION_STARTS[genNumber] : data.steps.length) - GENERATION_STARTS[genNumber - 1];
+		//Make sure step is set to the start of the generation
+		PLAY_STEP = GENERATION_STARTS[genNumber - 1];
+		for(var i = 0; i < generationLength; i++) {
+			step(data.steps[PLAY_STEP++]);
+		}
+		// Move to next generation
+		PLAY_GEN++;
+	}
+	/*
+	* Finds proper canvas object of a given x iterator value
+	* @param integer 	it 	Iterator value of x
+	*/
+	function findCanvasObjForX(it) {
+		// TODO: fix this function to work for customizable X values!
+		if(0 === it || 1 === it)
+			return CANVAS_ARR[0];
+		if(it % 2 === 0)
+			return CANVAS_ARR[it / 2];
+		else
+			return CANVAS_ARR[(it - 1) / 2 ];
+	}
+
+	/*
+	* Performs one step of the algorithm
+	* @param object 	stepData 	Data object for the current step
+	*/
+	function step(stepData) {
+		console.log(stepData);
+		// TODO: inlcude both parents in drawing!
+		var parent1 = -1 !== stepData.parentIds[0] ? findStepById(stepData.parentIds[0], stepData.generation - 1) : undefined;
+		var parent2 = -1 !== stepData.parentIds[1] ? findStepById(stepData.parentIds[1], stepData.generation - 1) : undefined;
+		// Loop throught all the x values of the step
+		for(var i = 0; i < stepData.x.length; i += 2) {
+			var x1 = stepData.x[i];
+			var x2 = stepData.x.length  > i + 1 ? stepData.x[i + 1] : 0;
+			var drawLine = false;
+			var parentx1 = 0, parentx2 = 0;
+			if(undefined !== parent1) {
+				drawLine = true;
+				parentx1 = parent1.x[i];
+				parentx2 = parent1.x.length  > i + 1 ? parent1.x[i + 1] : 0;
+			}
+
+			var canvasObj = findCanvasObjForX(i);
+			// TODO: hardcoded problem max X
+			renderPoint(x1, x2,  canvasObj, 10, 10, parentx1, parentx2, drawLine);
+		}
+	}
+	/*
+	* Main animation loop
+	*/
+	function animationLoop() {
+		// If canvases are setup
+		if(isSetup()) {
+			stepGen(ANIMATION_DATA, PLAY_GEN);
+			// If we reached the last generation, stop playback
+			if(PLAY_GEN > LAST_GENERATION) {
+				stop();
+			}
+		}
+		// Request next frame
+		REQUEST_LOOP = window.requestAnimationFrame(animationLoop);
+	}
+	/*
+	* Clears all canvases
+	*/
+	function clearCanvases(){
+		// Loop in reverse so the splice function works properly!
+		// (And also we get numbering from 0 in JS array, unlike what happens when using DELETE)
+		for(var i = CANVAS_ARR.length - 1; i >= 0 ; i-- ) {
+			CANVAS_ARR[i].canvas.remove();
+			CANVAS_ARR.splice(i, 1);
+		}
+	}
+
+	/*
+	* Spawns a canvas with the given id
+	* @param integer 	id 	Canvas id
+	*/
+	function spawnCanvas(id) {
+		var container = self;
+		// Clone default settings
+		var c = evolutionUtil.clone(DEFAULT_CANVAS_SETTING);
+		c.id = id;
+		// Create a canvas element
+		c.canvas = $('<canvas/>').height(c.height).width(c.width).attr('height', c.height).attr('width', c.width);
+		container.append(c.canvas);
+		c.ctx = c.canvas[0].getContext('2d');
+		// Push into array
+		CANVAS_ARR.push(c);
+	}
+
+	/*
+	* Setups the page for playback (proper number of canvas elements)
+	* @param object 	data 	Data object for the algorithm we are currently animating
+	*/
+	function playSetup(data) {
+		// Clear any previous canvases
+		clearCanvases();
+		var dimensions = evolutionUtil.getProp(data, 'problemDim', 'integer');
+		var canvasId = 0;
+		for(var i = 0; i < dimensions; i += 2) {
+			// Spawn canvas for every 2 dimensions
+			spawnCanvas(canvasId++);
+		}
+		IS_SETUP = true;
+	}
+
+
+	/*
+	* Starts playback
+	*/
+	var play = function() {
+		if (isLoaded() && !isPlaying()) {
+			// Set up the canvases
+			playSetup(ANIMATION_DATA);
+			// Play the animation
+			animationLoop();
+		}
+		console.log(CANVAS_ARR);
+	}
+
+	/*
+	* Stops playback
+	*/
+	var stop = function() {
+		if (isPlaying()) {
+			window.cancelAnimationFrame(REQUEST_LOOP);
+			REQUEST_LOOP = undefined;
+		}
+	}
+
+	/*
+	* Transforms (scales) coordinates from problem dimensions to the physical dimensions on the canvas
+	* @param object 	ctx 	Canvas context object
+	* @param integer 	x 		Value of X
+	* @param integer 	y 		Value of Y
+	* @param integer 	maxX 	Maximum value of X for given problem
+	* @param integer 	maxY 	Maximum value of Y for given problem
+	*/
+	function coordinateTransform(ctx, x, y, maxX, maxY) {
+		var newX =  ctx.width / (maxX / x);
+		var newY =  ctx.height / (maxY / y);
+		return {x: newX, y: newY};
+	}
 
 	/*
 	* Function that checks the given properties and initializes the plugin
@@ -226,8 +466,21 @@ $.fn.evoAnimate = function(props) {
 			alert('Erorr: Source must be defined!');
 			return false;
 		}
+		var sourceType = props.hasOwnProperty('sourceType') ? props.sourceType.toLowerCase() : 'url';
+		if('url' === sourceType) {
+			//TODO: imeplement reading source from URL
+		} else if('string' === sourceType) {
+			ANIMATION_DATA = parseInput(exampleInput);
+		}
+		var playOnLoad = props.hasOwnProperty('playOnLoad') ? props.playOnLoad : true;
+		if(playOnLoad) {
+			play();
+		}
+
 		return true;
 	}
 	// 	Initialize the plugin
+	this.play = play;
+	this.stop = stop;
 	return initialize() ? this : false;
 };
