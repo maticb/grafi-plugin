@@ -12,6 +12,6 @@ $(document).ready(function(){
 		source: exampleInput,
 		sourceType: 'STRING',
 		display: [[1,2],[2,3]],
-		canvasSize: [300,300]
+		canvasSize: [[200,200],[100,100]]
 	});
 });

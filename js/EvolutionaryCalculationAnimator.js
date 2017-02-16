@@ -380,10 +380,10 @@ $.fn.evoAnimate = function(props) {
 		// Loop throught all canvases, because all canvases will have a change on every step!
 		for(var i in CANVAS_ARR) {
 			var canvasObj = CANVAS_ARR[i];
-
-			var x = canvasObj.xIndex -1 ;
+			// X and Y axis values are stored via the indexes, which start with 1 (X1 = 1)
+			var x = canvasObj.xIndex - 1;
 			var y = canvasObj.yIndex - 1;
-
+			// Get actual values from current step data
 			var x1 = stepData.x[x];
 			var x2 = stepData.x[y];
 			// Check if parents exsist
@@ -434,12 +434,18 @@ $.fn.evoAnimate = function(props) {
 	* Spawns a canvas with the given id
 	* @param integer 	id 			Canvas id
 	* @param array 		axisIds		Ids of X to put on the axis: [1, 2] defines that x1 is on the X axis and x2 on the Y axis
+	* @param array 		size		Array for canvas size: [300, 300] -> width: 300px, height: 300px
 	*/
-	function spawnCanvas(id, axisIds) {
+	function spawnCanvas(id, axisIds, size = undefined) {
 		var container = self;
 		// Clone default settings
 		var c = evolutionUtil.clone(DEFAULT_CANVAS_SETTING);
 		c.id = id;
+		//Set size
+		if($.isArray(size)) {
+			c.width = size[0];
+			c.height = size[1];
+		}
 		// Create a canvas element
 		c.canvas = $('<canvas/>').height(c.height).width(c.width).attr('height', c.height).attr('width', c.width);
 		container.append(c.canvas);
@@ -455,12 +461,16 @@ $.fn.evoAnimate = function(props) {
 	* @param object 	data 	Data object for the algorithm we are currently animating
 	*/
 	function playSetup(data) {
+		// Canvas size
+		var oneSize = 1 === CANVAS_SIZE_SETTING.length ? true : false;
 		// Clear any previous canvases
 		clearCanvases();
 		var canvasId = 0;
 		for(var i in CANVAS_X_SETTING) {
+			var currentSizeArr = oneSize ? CANVAS_SIZE_SETTING[0] : CANVAS_SIZE_SETTING[i];
+			console.log(currentSizeArr);
 			// Spawn canvas for every 2 dimensions
-			spawnCanvas(canvasId++, CANVAS_X_SETTING[i]);
+			spawnCanvas(canvasId++, CANVAS_X_SETTING[i], currentSizeArr);
 		}
 		IS_SETUP = true;
 	}
@@ -556,16 +566,15 @@ $.fn.evoAnimate = function(props) {
 					}
 				}
 				if(pass && isArray)
-					CANVAS_SIZE_SETTING = [canvasSize];
-				else if(!isArray)
 					CANVAS_SIZE_SETTING = canvasSize;
+				else if(!isArray)
+					CANVAS_SIZE_SETTING = [canvasSize];
 				else
 					console.warn('All items within the canvasSize array must be arrays.');
 
 			} else {
 				console.warn('The canvasSize property should be an array!');
 			}
-
 		}
 		//SourceType
 		var sourceType = props.hasOwnProperty('sourceType') ? props.sourceType.toLowerCase() : 'url';
