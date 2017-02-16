@@ -63,6 +63,7 @@ $.fn.evoAnimate = function(props) {
 	var ANIMATION_DATA = {}; // Parsed animation data
 	var CANVAS_ARR = []; // Array of canvases
 	var CANVAS_X_SETTING = []; // Sets which X should be displayed on which canvas
+	var CANVAS_SIZE_SETTING = []; // Sets canvas sizes
 
 	// Playback
 	var GENERATION_STARTS = []; // Array of indexes where given generation starts e.g.: [0,10,16] would indicate that generation 2 starts on index 10
@@ -139,6 +140,17 @@ $.fn.evoAnimate = function(props) {
 		PLAY_STEP = 0;
 		// Get problem's maximum range
 		setProblemRange(rtrn);
+		// If the display array is not set, create all combinations of X-es
+		if(undefined === CANVAS_X_SETTING) {
+			var problemDim = rtrn.problemDim;
+			var combinationArr = [];
+			for(var i = 0; i< problemDim; i++) {
+				for(var j = i + 1; j < problemDim; j++) {
+					combinationArr.push([i + 1, j + 1]);
+				}
+			}
+			CANVAS_X_SETTING = combinationArr;
+		}
 		return rtrn;
 	}
 
@@ -359,7 +371,7 @@ $.fn.evoAnimate = function(props) {
 	/*
 	* Finds proper canvas object of a given x iterator value
 	* @param integer 	it 	Iterator value of x
-	*/
+	*
 	function findCanvasObjForX(it) {
 		// TODO: fix this function to work for customizable X values!
 		if(0 === it || 1 === it)
@@ -368,39 +380,41 @@ $.fn.evoAnimate = function(props) {
 			return CANVAS_ARR[it / 2];
 		else
 			return CANVAS_ARR[(it - 1) / 2 ];
-	}
+	}*/
 
 	/*
 	* Performs one step of the algorithm
 	* @param object 	stepData 	Data object for the current step
 	*/
 	function step(stepData) {
-		console.log(stepData);
 		var parent1 = -1 !== stepData.parentIds[0] ? findStepById(stepData.parentIds[0], stepData.generation - 1) : undefined;
 		var parent2 = -1 !== stepData.parentIds[1] ? findStepById(stepData.parentIds[1], stepData.generation - 1) : undefined;
 		// Loop throught all the x values of the step
-		for(var i = 0; i < stepData.x.length; i += 2) {
-			var x1 = stepData.x[i];
-			var x2 = stepData.x.length  > i + 1 ? stepData.x[i + 1] : 0;
+		// Loop throught all canvases, because all canvases will have a change on every step!
+		for(var i in CANVAS_ARR) {
+			var canvasObj = CANVAS_ARR[i];
+
+			var x = canvasObj.xIndex -1 ;
+			var y = canvasObj.yIndex - 1;
+
+			var x1 = stepData.x[x];
+			var x2 = stepData.x[y];
+			// Check if parents exsist
 			var drawLine = false;
 			var parentx1 = 0, parenty1 = 0;
 			var parentx2 = 0, parenty2 = 0;
 			if(undefined !== parent1) {
 				drawLine = true;
-				parentx1 = parent1.x[i];
-				parenty1 = parent1.x.length  > i + 1 ? parent1.x[i + 1] : 0;
+				parentx1 = parent1.x[x];
+				parenty1 = parent1.x[y];
 			}
 			if(undefined !== parent2) {
 				drawLine = true;
-				parentx2 = parent2.x[i];
-				parenty2 = parent2.x.length  > i + 1 ? parent2.x[i + 1] : 0;
+				parentx2 = parent2.x[x];
+				parenty2 = parent2.x[y];
 			}
-
-			var canvasObj = findCanvasObjForX(i);
-			// TODO: hardcoded problem max X
 			renderPoint(stepData.id, x1, x2,  canvasObj, parentx1, parenty1, parentx2, parenty2, drawLine);
 		}
-		// Loop throught all canvases, because all caanvases will have a change on every step!
 	}
 	/*
 	* Main animation loop
@@ -431,9 +445,10 @@ $.fn.evoAnimate = function(props) {
 
 	/*
 	* Spawns a canvas with the given id
-	* @param integer 	id 	Canvas id
+	* @param integer 	id 			Canvas id
+	* @param array 		axisIds		Ids of X to put on the axis: [1, 2] defines that x1 is on the X axis and x2 on the Y axis
 	*/
-	function spawnCanvas(id) {
+	function spawnCanvas(id, axisIds) {
 		var container = self;
 		// Clone default settings
 		var c = evolutionUtil.clone(DEFAULT_CANVAS_SETTING);
@@ -442,6 +457,8 @@ $.fn.evoAnimate = function(props) {
 		c.canvas = $('<canvas/>').height(c.height).width(c.width).attr('height', c.height).attr('width', c.width);
 		container.append(c.canvas);
 		c.ctx = c.canvas[0].getContext('2d');
+		c.xIndex = parseInt(axisIds[0]);
+		c.yIndex = parseInt(axisIds[1]);
 		// Push into array
 		CANVAS_ARR.push(c);
 	}
@@ -453,11 +470,10 @@ $.fn.evoAnimate = function(props) {
 	function playSetup(data) {
 		// Clear any previous canvases
 		clearCanvases();
-		var dimensions = evolutionUtil.getProp(data, 'problemDim', 'integer');
 		var canvasId = 0;
-		for(var i = 0; i < dimensions; i += 2) {
+		for(var i in CANVAS_X_SETTING) {
 			// Spawn canvas for every 2 dimensions
-			spawnCanvas(canvasId++);
+			spawnCanvas(canvasId++, CANVAS_X_SETTING[i]);
 		}
 		IS_SETUP = true;
 	}
@@ -473,7 +489,6 @@ $.fn.evoAnimate = function(props) {
 			// Play the animation
 			animationLoop();
 		}
-		console.log(CANVAS_ARR);
 	}
 
 	/*
@@ -491,14 +506,10 @@ $.fn.evoAnimate = function(props) {
 	* @param object 	ctx 	Canvas context object
 	* @param integer 	x 		Value of X
 	* @param integer 	y 		Value of Y
-	* @param integer 	maxX 	Maximum value of X for given problem
-	* @param integer 	maxY 	Maximum value of Y for given problem
 	*/
 	function coordinateTransform(ctx, x, y) {
-		// TODO: Imeplement negative range (-500 to 500)
 		var newX =  ctx.width / (ANIMATION_DATA.problemRange / x) + ANIMATION_DATA.problemPadding;
 		var newY =  ctx.height / (ANIMATION_DATA.problemRange / y) + ANIMATION_DATA.problemPadding;
-		console.log({x: newX, y: newY});
 		return {x: newX, y: newY};
 	}
 
@@ -512,17 +523,11 @@ $.fn.evoAnimate = function(props) {
 			alert('Erorr: Source must be defined!');
 			return false;
 		}
-		//SourceType
-		var sourceType = props.hasOwnProperty('sourceType') ? props.sourceType.toLowerCase() : 'url';
-		if('url' === sourceType) {
-			//TODO: imeplement reading source from URL
-		} else if('string' === sourceType) {
-			ANIMATION_DATA = parseInput(exampleInput);
-		}
+
 		//Display
-		var display = undefined;
+		CANVAS_X_SETTING = undefined;
 		if(props.hasOwnProperty('display')) {
-			display = props.display;
+			var display = props.display;
 			if($.isArray(display)) {
 				var pass = true;
 				var isArray = false;
@@ -536,19 +541,19 @@ $.fn.evoAnimate = function(props) {
 					}
 				}
 				if(pass && isArray)
-					CANVAS_X_SETTING = [display];
-				else if(!isArray)
 					CANVAS_X_SETTING = display;
+				else if(!isArray)
+					CANVAS_X_SETTING = [display];
 				else
 					console.warn('All items within the display array must be arrays.');
 
 			} else {
 				console.warn('The display property should be an array!');
 			}
-
 		}
+		// Do not check if display is set here, because sourcetype can be URL ! Create all combinations of X-es in parseinput to make sure data is loaded
 		//CanvasSize
-		var canvasSize =[[300,300]];
+		CANVAS_SIZE_SETTING =[[300,300]];
 		if(props.hasOwnProperty('canvasSize')) {
 			canvasSize = props.canvasSize;
 			if($.isArray(canvasSize)) {
@@ -564,9 +569,9 @@ $.fn.evoAnimate = function(props) {
 					}
 				}
 				if(pass && isArray)
-					CANVAS_X_SETTING = [display];
+					CANVAS_SIZE_SETTING = [canvasSize];
 				else if(!isArray)
-					CANVAS_X_SETTING = display;
+					CANVAS_SIZE_SETTING = canvasSize;
 				else
 					console.warn('All items within the canvasSize array must be arrays.');
 
@@ -574,6 +579,13 @@ $.fn.evoAnimate = function(props) {
 				console.warn('The canvasSize property should be an array!');
 			}
 
+		}
+		//SourceType
+		var sourceType = props.hasOwnProperty('sourceType') ? props.sourceType.toLowerCase() : 'url';
+		if('url' === sourceType) {
+			//TODO: imeplement reading source from URL
+		} else if('string' === sourceType) {
+			ANIMATION_DATA = parseInput(exampleInput);
 		}
 		//PlayOnLoad
 		var playOnLoad = props.hasOwnProperty('playOnLoad') ? props.playOnLoad : true;
