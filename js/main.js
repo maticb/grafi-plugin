@@ -11,7 +11,7 @@ $(document).ready(function(){
 	$('#main').evoAnimate({
 		source: exampleInput,
 		sourceType: 'STRING',
-		display: [[1,2],[1,3],[2,3]],
+		display: [[1,2],[2,3]],
 		canvasSize: [300,300]
 	});
 });

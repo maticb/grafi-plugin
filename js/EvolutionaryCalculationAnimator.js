@@ -368,19 +368,6 @@ $.fn.evoAnimate = function(props) {
 		// Move to next generation
 		PLAY_GEN++;
 	}
-	/*
-	* Finds proper canvas object of a given x iterator value
-	* @param integer 	it 	Iterator value of x
-	*
-	function findCanvasObjForX(it) {
-		// TODO: fix this function to work for customizable X values!
-		if(0 === it || 1 === it)
-			return CANVAS_ARR[0];
-		if(it % 2 === 0)
-			return CANVAS_ARR[it / 2];
-		else
-			return CANVAS_ARR[(it - 1) / 2 ];
-	}*/
 
 	/*
 	* Performs one step of the algorithm
