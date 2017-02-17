@@ -45,8 +45,9 @@ Več grafov;
 
 
 $.fn.evoAnimate = function(props) {
-	var self = this;
+
 	// Static plugin private vars
+	var self = this;
 	var ARGS_NUM = 7; // Number of arguments in the first line of the input (this should never change, unless the format of the input string will change)
 	// Default values
 	var DEFAULT_CANVAS_SETTING = {
@@ -116,7 +117,6 @@ $.fn.evoAnimate = function(props) {
 				// End loop
 				return true;
 			}
-			//console.log(index + ' ' + prev);
 		});
 		//Parse the remaining lines
 		evolutionUtil.indexOfAll(input, ['{','}'], function(index, prev, count){
@@ -452,6 +452,8 @@ $.fn.evoAnimate = function(props) {
 		c.ctx = c.canvas[0].getContext('2d');
 		c.xIndex = parseInt(axisIds[0]);
 		c.yIndex = parseInt(axisIds[1]);
+		// Add a button that shows/hides controls
+		//TODO:
 		// Push into array
 		CANVAS_ARR.push(c);
 	}
@@ -461,6 +463,9 @@ $.fn.evoAnimate = function(props) {
 	* @param object 	data 	Data object for the algorithm we are currently animating
 	*/
 	function playSetup(data) {
+		// Do not reset canvases
+		if(isSetup())
+			return;
 		// Canvas size
 		var oneSize = 1 === CANVAS_SIZE_SETTING.length ? true : false;
 		// Clear any previous canvases
@@ -468,7 +473,6 @@ $.fn.evoAnimate = function(props) {
 		var canvasId = 0;
 		for(var i in CANVAS_X_SETTING) {
 			var currentSizeArr = oneSize ? CANVAS_SIZE_SETTING[0] : CANVAS_SIZE_SETTING[i];
-			console.log(currentSizeArr);
 			// Spawn canvas for every 2 dimensions
 			spawnCanvas(canvasId++, CANVAS_X_SETTING[i], currentSizeArr);
 		}
@@ -508,6 +512,64 @@ $.fn.evoAnimate = function(props) {
 		var newX =  ctx.width / (ANIMATION_DATA.problemRange / x) + ANIMATION_DATA.problemPadding;
 		var newY =  ctx.height / (ANIMATION_DATA.problemRange / y) + ANIMATION_DATA.problemPadding;
 		return {x: newX, y: newY};
+	}
+
+	/*
+	* Find any points below the mouse click
+	* @param integer 	offsetX 	X axis offset of the click (relative to canvas)
+	* @param integer 	offsetY 	Y axis offset of the click (relative to canvas)
+	* @param object 	canvasObj 	Canvas object clicked on
+	*/
+	function findPointsOnClick(offsetX, offsetY, canvasObj) {
+		// We can have multiple points near the same area, so use an array
+		var matchedSteps = [];
+		for(var i in ANIMATION_DATA.steps) {
+			var step = ANIMATION_DATA.steps[i];
+			var x = canvasObj.xIndex - 1;
+			var y = canvasObj.yIndex - 1;
+			var coords = coordinateTransform(canvasObj, step.x[x], step.x[y]);
+			x = coords.x;
+			y = coords.y;
+			// Check if point's physical coordinates match the click
+			if(offsetX - 5  < x && x < offsetX + 5 && offsetY - 5  < y && y < offsetY + 5) {
+				console.log(' Clicked on: ');
+				console.log(step);
+				matchedSteps.push(evolutionUtil.clone(step));
+			}
+		}
+		return matchedSteps;
+	}
+
+	/*
+	* Bind events
+	*/
+	function bindEvents() {
+		$.each(CANVAS_ARR, function(key, value){
+			var $canvas = this.canvas;
+			$canvas
+			.off('click')
+			.on('click', function(e){
+				e.preventDefault();
+				var canvas = e.currentTarget;
+				var oX = e.offsetX;
+				var oY = e.offsetY;
+				// Find the correct canvas object from the canvas array
+				for(var i in CANVAS_ARR) {
+					var item = CANVAS_ARR[i];
+					if(canvas === item.canvas[0]) {
+						canvas = item;
+						break;
+					}
+				}
+				var clickedPoints = findPointsOnClick(oX, oY, canvas);
+			})
+			.off('contextmenu')
+			.on('contextmenu', function(e) {
+				e.preventDefault();
+				// TODO: contextmenu click on points!
+			});
+
+		});
 	}
 
 	/*
@@ -588,7 +650,8 @@ $.fn.evoAnimate = function(props) {
 		if(playOnLoad) {
 			play();
 		}
-
+		// Event binds
+		bindEvents();
 		return true;
 	}
 	// 	Initialize the plugin
