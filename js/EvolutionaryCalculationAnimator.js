@@ -61,6 +61,14 @@ $.fn.evoAnimate = function(props) {
 	};
 
 	// Non-static private vars
+	// Playback FPS limiting variables
+	var fps = 25;
+	var fpsInterval;
+	var now;
+	var then;
+	var elapsed;
+
+	// Animation data
 	var ANIMATION_DATA = {}; // Parsed animation data
 	var CANVAS_ARR = []; // Array of canvases
 	var CANVAS_X_SETTING = []; // Sets which X should be displayed on which canvas
@@ -75,6 +83,23 @@ $.fn.evoAnimate = function(props) {
 	var IS_SETUP = false; // Indicates if canvas and other elements needed have been setup
 	var PLAY_GEN = 1; // Current generation number
 	var PLAY_STEP = 0; // Current step number
+
+	// Playback user settings
+	// TODO: Implement!
+	var PLAYBACK_SPEED = 50; // Playback speed in milliseconds
+
+	// Graphic settings
+	// TODO: Implement!
+	var CANVAS_BG_COLOR = '#FFFFFF';
+
+	// TODO: Implement!
+	var POINT_CURRENT_COLOR = '#FF0000';
+	var POINT_PREVIOUS_GEN_COLOR = '#660000';
+	var POINT_OLDER_COLORS = '#000000';
+
+	// TODO: Implement!
+	var LINE_CURRENT_COLOR = '#666666';
+	var LINE_OLDER_COLOR = '#000000';
 
 
 	/*
@@ -93,8 +118,8 @@ $.fn.evoAnimate = function(props) {
 			}
 		}
 		data.problemRange = (max - min);
-		data.problemPadding = data.problemRange * 0.05;
-		data.problemRange *= 1.1; // Add some padding on the edges
+		data.problemPadding = data.problemRange * 0.1;
+		data.problemRange *= 1.2; // Add some padding on the edges
 	}
 
 	/*
@@ -274,7 +299,7 @@ $.fn.evoAnimate = function(props) {
 				currentGen++;
 			}
 		}
-		LAST_GENERATION = currentGen - 1;
+		LAST_GENERATION = currentGen;
 	}
 	/*
 	* Check if data is loaded
@@ -314,23 +339,22 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
-	* Show a point on a given canvas
+	* Render a step on a given canvas
 	* @param integer 	x 			X coordinate
 	* @param integer 	y 			Y coordinate
 	* @param object 	ctxObj 		Object with canvas data
 	* @param string 	pointColor 	Color of the point to draw
 	* @param string 	lineColor 	Color of the line to draw
 	*/
-	// TODO: temp draw ID of point
-	function renderPoint(id, x, y = 0, ctxObj, prevX = 0, prevY = 0, prevX1 = 0, prevY1 = 1,  drawLine = true, pointColor = '#FF0000', lineColor = '#000000') {
+	function renderStep(x, y = 0, ctxObj, prevX = 0, prevY = 0, prevX1 = 0, prevY1 = 1,  drawLine = true) {
 		var ctx = ctxObj.ctx;
-		ctx.fillStyle = pointColor;
+		ctx.fillStyle = POINT_CURRENT_COLOR;
 		var physicalCoords = coordinateTransform(ctxObj, x, y);
 		ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
 
 		// Add line from the previously drawn point
 		if(true === drawLine) {
-			ctx.fillStyle = lineColor;
+			ctx.fillStyle = LINE_CURRENT_COLOR;
 			var prevCoords = coordinateTransform(ctxObj, prevX, prevY);
 			var prevCoords1 = coordinateTransform(ctxObj, prevX1, prevY1);
 			// Line to parent 1
@@ -344,8 +368,7 @@ $.fn.evoAnimate = function(props) {
 			ctx.lineTo(physicalCoords.x,physicalCoords.y);
 			ctx.stroke();
 		}
-		//TODO: temp debug, draw point id:
-		ctx.fillText(id, physicalCoords.x+5, physicalCoords.y+5);
+
 
 		//Reset color Back to Black #ACDC
 		ctx.fillStyle = '#000000';
@@ -374,8 +397,8 @@ $.fn.evoAnimate = function(props) {
 	* @param object 	stepData 	Data object for the current step
 	*/
 	function step(stepData) {
-		var parent1 = -1 !== stepData.parentIds[0] ? findStepById(stepData.parentIds[0], stepData.generation - 1) : undefined;
-		var parent2 = -1 !== stepData.parentIds[1] ? findStepById(stepData.parentIds[1], stepData.generation - 1) : undefined;
+		var parent1 = -1 !== stepData.parentIds[0] ? findStepById(stepData.parentIds[0]) : undefined;
+		var parent2 = -1 !== stepData.parentIds[1] ? findStepById(stepData.parentIds[1]) : undefined;
 		// Loop throught all the x values of the step
 		// Loop throught all canvases, because all canvases will have a change on every step!
 		for(var i in CANVAS_ARR) {
@@ -388,35 +411,20 @@ $.fn.evoAnimate = function(props) {
 			var x2 = stepData.x[y];
 			// Check if parents exsist
 			var drawLine = false;
-			var parentx1 = 0, parenty1 = 0;
-			var parentx2 = 0, parenty2 = 0;
+			var parent1x = 0, parent1y = 0;
+			var parent2x = 0, parent2y = 0;
 			if(undefined !== parent1) {
 				drawLine = true;
-				parentx1 = parent1.x[x];
-				parenty1 = parent1.x[y];
+				parent1x = parent1.x[x];
+				parent1y = parent1.x[y];
 			}
 			if(undefined !== parent2) {
 				drawLine = true;
-				parentx2 = parent2.x[x];
-				parenty2 = parent2.x[y];
+				parent2x = parent2.x[x];
+				parent2y = parent2.x[y];
 			}
-			renderPoint(stepData.id, x1, x2,  canvasObj, parentx1, parenty1, parentx2, parenty2, drawLine);
+			renderStep(x1, x2,  canvasObj, parent1x, parent1y, parent2x, parent2y, drawLine);
 		}
-	}
-	/*
-	* Main animation loop
-	*/
-	function animationLoop() {
-		// If canvases are setup
-		if(isSetup()) {
-			stepGen(ANIMATION_DATA, PLAY_GEN);
-			// If we reached the last generation, stop playback
-			if(PLAY_GEN > LAST_GENERATION) {
-				stop();
-			}
-		}
-		// Request next frame
-		REQUEST_LOOP = window.requestAnimationFrame(animationLoop);
 	}
 	/*
 	* Clears all canvases
@@ -459,6 +467,32 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
+	* Main animation loop
+	*/
+	function animationLoop() {
+		console.log(1);
+		// Calculate elapsed time since last loop
+		now = Date.now();
+		elapsed = now - then;
+		if (elapsed > fpsInterval) {
+			// Get ready for next frame by setting then=now, but also adjust for your
+        	// specified fpsInterval not being a multiple of RAF's interval (16.7ms)
+        	then = now - (elapsed % fpsInterval);
+			// If canvases are setup
+			if(isSetup()) {
+				stepGen(ANIMATION_DATA, PLAY_GEN);
+				// If we reached the last generation, stop playback
+				if(PLAY_GEN > LAST_GENERATION) {
+					stop();
+					return;
+				}
+			}
+		}
+		// Request next frame
+		REQUEST_LOOP = window.requestAnimationFrame(animationLoop);
+	}
+
+	/*
 	* Setups the page for playback (proper number of canvas elements)
 	* @param object 	data 	Data object for the algorithm we are currently animating
 	*/
@@ -479,7 +513,6 @@ $.fn.evoAnimate = function(props) {
 		IS_SETUP = true;
 	}
 
-
 	/*
 	* Starts playback
 	*/
@@ -487,6 +520,9 @@ $.fn.evoAnimate = function(props) {
 		if (isLoaded() && !isPlaying()) {
 			// Set up the canvases
 			playSetup(ANIMATION_DATA);
+			// Set current time and FPS interval
+			fpsInterval = 1000 / fps;
+			then = Date.now();
 			// Play the animation
 			animationLoop();
 		}
@@ -532,12 +568,24 @@ $.fn.evoAnimate = function(props) {
 			y = coords.y;
 			// Check if point's physical coordinates match the click
 			if(offsetX - 5  < x && x < offsetX + 5 && offsetY - 5  < y && y < offsetY + 5) {
-				console.log(' Clicked on: ');
-				console.log(step);
 				matchedSteps.push(evolutionUtil.clone(step));
 			}
 		}
 		return matchedSteps;
+	}
+
+	/*
+	* Find the correct canvas in the canvas array
+	* @param object 	canvas 		Javascript DOM canvas object
+	*/
+	function findCanvasInArr(canvas) {
+		for(var i in CANVAS_ARR) {
+			var item = CANVAS_ARR[i];
+			if(canvas === item.canvas[0]) {
+				return item;
+			}
+		}
+		return undefined;
 	}
 
 	/*
@@ -550,18 +598,13 @@ $.fn.evoAnimate = function(props) {
 			.off('click')
 			.on('click', function(e){
 				e.preventDefault();
-				var canvas = e.currentTarget;
+				var canvas = findCanvasInArr(e.currentTarget);
 				var oX = e.offsetX;
 				var oY = e.offsetY;
-				// Find the correct canvas object from the canvas array
-				for(var i in CANVAS_ARR) {
-					var item = CANVAS_ARR[i];
-					if(canvas === item.canvas[0]) {
-						canvas = item;
-						break;
-					}
-				}
+
 				var clickedPoints = findPointsOnClick(oX, oY, canvas);
+				// TODO: Implement
+				console.log(clickedPoints);
 			})
 			.off('contextmenu')
 			.on('contextmenu', function(e) {
@@ -584,6 +627,7 @@ $.fn.evoAnimate = function(props) {
 		}
 
 		//Display
+		// Defines which X-es to show on whichcanvas e.g.: [[x1,x2],[x2,x3]]]
 		CANVAS_X_SETTING = undefined;
 		if(props.hasOwnProperty('display')) {
 			var display = props.display;
@@ -611,8 +655,9 @@ $.fn.evoAnimate = function(props) {
 			}
 		}
 		// Do not check if display is set here, because sourcetype can be URL ! Create all combinations of X-es in parseinput to make sure data is loaded
-		//CanvasSize
-		CANVAS_SIZE_SETTING =[[300,300]];
+		// (If display is not set, we have to create all combinations of all dimensions, but there is a chance we do not yet have the data at this point)
+		// CanvasSize
+		CANVAS_SIZE_SETTING = [[300,300]];
 		if(props.hasOwnProperty('canvasSize')) {
 			canvasSize = props.canvasSize;
 			if($.isArray(canvasSize)) {
