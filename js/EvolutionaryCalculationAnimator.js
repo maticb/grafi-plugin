@@ -95,12 +95,12 @@ $.fn.evoAnimate = function(props) {
 
 	// TODO: Implement!
 	var POINT_CURRENT_COLOR = '#FF0000';
-	var POINT_PREVIOUS_GEN_COLOR = '#660000';
-	var POINT_OLDER_COLORS = '#000000';
+	var POINT_PREVIOUS_GEN_COLOR = '#00FF00';
+	var POINT_OLDER_COLORS = '#0000FF';
 
 	// TODO: Implement!
-	var LINE_CURRENT_COLOR = '#666666';
-	var LINE_OLDER_COLOR = '#000000';
+	var LINE_CURRENT_COLOR = '#00FF00';
+	var LINE_OLDER_COLOR = '#FF0000';
 
 
 	/*
@@ -344,8 +344,11 @@ $.fn.evoAnimate = function(props) {
 	* @param integer 	x 			X coordinate
 	* @param integer 	y 			Y coordinate
 	* @param object 	ctxObj 		Object with canvas data
-	* @param string 	pointColor 	Color of the point to draw
-	* @param string 	lineColor 	Color of the line to draw
+	* @param integer 	prevX 		X coordinate of parent 1
+	* @param integer 	prevY 		Y coordinate of parent 1
+	* @param integer 	prevX1 		X coordinate of parent 2
+	* @param integer 	prevY1 		Y coordinate of parent 2
+	* @param boolean 	drawLine 	Indicates if line is to be drawn from current point to parents
 	*/
 	function renderStep(x, y = 0, ctxObj, prevX = 0, prevY = 0, prevX1 = 0, prevY1 = 1,  drawLine = true) {
 		var ctx = ctxObj.ctx;
@@ -370,9 +373,53 @@ $.fn.evoAnimate = function(props) {
 			ctx.stroke();
 		}
 
+	}
 
-		//Reset color Back to Black #ACDC
-		ctx.fillStyle = '#000000';
+	/*
+	* Fades given points (previous generation)
+	* @param object 	ctxObj 		Object with canvas data
+	* @param array 		parents 	Array of parents, should always be only 2
+	* @param integer 	childX 		Child's X coordinate
+	* @param integer 	childY 		Child's Y coordinate
+	*/
+	function fadePoints(ctxObj, parents, childX, childY) {
+		var ctx = ctxObj.ctx;
+		// X and Y axis values are stored via the indexes, which start with 1 (X1 = 1)
+		var x = ctxObj.xIndex - 1;
+		var y = ctxObj.yIndex - 1;
+		// Convert child coordinates to physical
+		var physicalCoords = coordinateTransform(ctxObj, childX, childY);
+		childX = physicalCoords.x;
+		childY = physicalCoords.y;
+		for(var i in parents) {
+			var parent = parents[i];
+			// Both parents get POINT_PREVIOUS_GEN_COLOR
+			ctx.fillStyle = POINT_PREVIOUS_GEN_COLOR;
+			physicalCoords = coordinateTransform(ctxObj, parent.x[x], parent.x[y]);
+			ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
+			// Line to parents gets LINE_OLDER_COLOR
+			ctx.fillStyle = LINE_OLDER_COLOR;
+			ctx.beginPath();
+			ctx.moveTo(childX, childY);
+			ctx.lineTo(physicalCoords.x,physicalCoords.y);
+			ctx.stroke();
+
+
+
+			// Parents of these parents get POINT_OLDER_COLORS
+			ctx.fillStyle = POINT_OLDER_COLORS;
+			var parent1 = -1 !== parent.parentIds[0] ? findStepById(parent.parentIds[0]) : undefined;
+			var parent2 = -1 !== parent.parentIds[1] ? findStepById(parent.parentIds[1]) : undefined;
+
+			if(undefined !== parent1) {
+				physicalCoords = coordinateTransform(ctxObj, parent1.x[x], parent1.x[y]);
+				ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
+			}
+			if(undefined !== parent2) {
+				physicalCoords = coordinateTransform(ctxObj, parent2.x[x], parent2.x[y]);
+				ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
+			}
+		}
 	}
 
 	/*
@@ -425,6 +472,10 @@ $.fn.evoAnimate = function(props) {
 				parent2y = parent2.x[y];
 			}
 			renderStep(x1, x2,  canvasObj, parent1x, parent1y, parent2x, parent2y, drawLine);
+			// "Fade" previous generation
+			if(undefined !== parent1 && undefined !== parent2) {
+				fadePoints(canvasObj, [parent1, parent2], x1, x2);
+			}
 		}
 	}
 	/*
@@ -471,7 +522,6 @@ $.fn.evoAnimate = function(props) {
 	* Main animation loop
 	*/
 	function animationLoop() {
-		console.log(1);
 		// Calculate elapsed time since last loop
 		now = Date.now();
 		elapsed = now - then;
@@ -604,8 +654,15 @@ $.fn.evoAnimate = function(props) {
 				var oY = e.offsetY;
 
 				var clickedPoints = findPointsOnClick(oX, oY, canvas);
-				// TODO: Implement
-				console.log(clickedPoints);
+				// TODO: Implement, temporary alert with information
+				//console.log(clickedPoints);
+				var msg = 'Podatki o točki/točkah: \n ';
+				for(var i in clickedPoints) {
+					var p = clickedPoints[i];
+					msg += 'Id: ' + p.id + ', Fitness: ' + p.fitness + ', Generation: ' + p.generation + ' \n ' ;
+				}
+				if(clickedPoints.length)
+					alert(msg);
 			})
 			.off('contextmenu')
 			.on('contextmenu', function(e) {
