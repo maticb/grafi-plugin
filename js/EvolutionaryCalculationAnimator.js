@@ -21,6 +21,7 @@ Več grafov;
 *
 * Init properties (OBJECT) containing:
 * - source 		string	REQUIRED	URL of the source file, or raw source data, depending on the settings (read below)
+* 			URL SOURCE NOT YET IMPLEMENETED!
 * - sourceType	string 	Optional	Set type of source, defaults to "URL". Possible types: "URL", "STRING"
 * - playOnLoad	bool	Optional	Defines if playback should start when plugin is done loading, defaults to true.
 * - display		array	Optional	Defines how many (2 per canvas) and which X values to show
@@ -28,18 +29,20 @@ Več grafov;
 *		Can also display fitness: [fit, x1]
 * 		Defined as an array, where the first X is numbered as "1": [1,2]  would display a canvas elements containing a graph, showing [x1,x2]
 *		To show multiple combinations define an array of arrays: [[1,2],[2,3]] -> [x1,x2] and [x2,x3]
-* - canvasSize array 	Optional	Defines dimensions of each canvas seperately, or  globally. Dimensions cannot be set
+* - canvasSize array 	Optional	Defines dimensions of each canvas seperately, or  globally.
 * 		If only an array of 2 integers is set, that will be considered as the dimension for all canvases: [300,300]
-* 		You can also pass an array of array (Identical in size to the above display array!) that will set dimensions for each canvas seperately
+* 		You can also pass an array of arrays (Identical in size to the above "display" array!) that will set dimensions for each canvas seperately
+* - fps 		integer Optional 	Frames per second, defaults to  25
 *
 *	Example configuration of plugin properties:
 
-{
+$('#selector').evoAnimate({
 	source: 'www.something.com/evolution.txt',
 	sourceType: 'URL',
 	playOnLoad: false,
-	display: [1,2]
-}
+	display: [1,2],
+	fps: 25,
+}};
 
 */
 
@@ -61,13 +64,6 @@ $.fn.evoAnimate = function(props) {
 	};
 
 	// Non-static private vars
-	// Playback FPS limiting variables
-	var fps = 25;
-	var fpsInterval;
-	var now;
-	var then;
-	var elapsed;
-
 	// Animation data
 	var ANIMATION_DATA = {}; // Parsed animation data
 	var CANVAS_ARR = []; // Array of canvases
@@ -84,9 +80,14 @@ $.fn.evoAnimate = function(props) {
 	var PLAY_GEN = 1; // Current generation number
 	var PLAY_STEP = 0; // Current step number
 
+	// Playback FPS limiting variables
+	var fps = 25;
+	var fpsInterval;
+	var now;
+	var then;
+	var elapsed;
+
 	// Playback user settings
-	// TODO: Implement!
-	var PLAYBACK_SPEED = 50; // Playback speed in milliseconds
 
 	// Graphic settings
 	// TODO: Implement!
@@ -626,8 +627,9 @@ $.fn.evoAnimate = function(props) {
 			return false;
 		}
 
+
 		//Display
-		// Defines which X-es to show on whichcanvas e.g.: [[x1,x2],[x2,x3]]]
+		// Defines which X-es to show on which canvas e.g.: [[x1,x2],[x2,x3]]]
 		CANVAS_X_SETTING = undefined;
 		if(props.hasOwnProperty('display')) {
 			var display = props.display;
@@ -690,6 +692,8 @@ $.fn.evoAnimate = function(props) {
 		} else if('string' === sourceType) {
 			ANIMATION_DATA = parseInput(exampleInput);
 		}
+		// FPS
+		fps = props.hasOwnProperty('fps') ? parseInt(props.fps) : fps;
 		//PlayOnLoad
 		var playOnLoad = props.hasOwnProperty('playOnLoad') ? props.playOnLoad : true;
 		if(playOnLoad) {
