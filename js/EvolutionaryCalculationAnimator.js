@@ -69,6 +69,7 @@ $.fn.evoAnimate = function(props) {
 	var CANVAS_ARR = []; // Array of canvases
 	var CANVAS_X_SETTING = []; // Sets which X should be displayed on which canvas
 	var CANVAS_SIZE_SETTING = []; // Sets canvas sizes
+	var RENDERED_GENERATIONS = []; // Stores generations that are to be rendered in current frame
 
 	// Playback
 	var GENERATION_STARTS = []; // Array of indexes where given generation starts e.g.: [0,10,16] would indicate that generation 2 starts on index 10
@@ -77,17 +78,23 @@ $.fn.evoAnimate = function(props) {
 	var IS_LOADED = false; // Boolean that indicates if any data is loaded (so we can start playback)
 	var IS_PLAYING = false; // Indicates if animation is playing
 	var IS_SETUP = false; // Indicates if canvas and other elements needed have been setup
-	var PLAY_GEN = 1; // Current generation number
+	//var PLAY_GEN = 1; // Current generation number //TODO: remove once new playback implementation is completed
 	var PLAY_STEP = 0; // Current step number
+	var LAST_GEN_ADD_FRAME = 0; // Stores the number of frames elasped since the last time we added a new generation to the playback
+	var LAST_ADDED_GENERATION = 1;
+
 
 	// Playback FPS limiting variables
-	var fps = 25;
+	var fps = 1;
 	var fpsInterval;
 	var now;
 	var then;
 	var elapsed;
 
 	// Playback user settings
+	var SHOWN_GENERATIONS_NUMBER = 2; // Defines number of generations to be shown on the canvas e.g.: if 2, the last 2 generations will be shown. 0 = all generations.
+	var ADD_GENERATION_AFTER = 2; // Defines the frame interval at which a new generation is added e.g.: 25 -> a new generation is added every 25 frames
+
 
 	// Graphic settings
 	// TODO: Implement!
@@ -99,8 +106,10 @@ $.fn.evoAnimate = function(props) {
 	var POINT_OLDER_COLORS = '#0000FF';
 
 	// TODO: Implement!
-	var LINE_CURRENT_COLOR = '#00FF00';
+	var LINE_CURRENT_COLOR = '#FF0000';
 	var LINE_OLDER_COLOR = '#FF0000';
+
+
 
 
 	/*
@@ -162,7 +171,7 @@ $.fn.evoAnimate = function(props) {
 		// Data is loaded
 		IS_LOADED  = true;
 		// Reset steps if new data is loaded
-		PLAY_GEN = 1;
+		//PLAY_GEN = 1;
 		PLAY_STEP = 0;
 		// Get problem's maximum range
 		setProblemRange(rtrn);
@@ -358,7 +367,7 @@ $.fn.evoAnimate = function(props) {
 
 		// Add line from the previously drawn point
 		if(true === drawLine) {
-			ctx.fillStyle = LINE_CURRENT_COLOR;
+			ctx.fillStyle = '#FF0000';//LINE_CURRENT_COLOR;
 			var prevCoords = coordinateTransform(ctxObj, prevX, prevY);
 			var prevCoords1 = coordinateTransform(ctxObj, prevX1, prevY1);
 			// Line to parent 1
@@ -372,7 +381,6 @@ $.fn.evoAnimate = function(props) {
 			ctx.lineTo(physicalCoords.x,physicalCoords.y);
 			ctx.stroke();
 		}
-
 	}
 
 	/*
@@ -398,11 +406,11 @@ $.fn.evoAnimate = function(props) {
 			physicalCoords = coordinateTransform(ctxObj, parent.x[x], parent.x[y]);
 			ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
 			// Line to parents gets LINE_OLDER_COLOR
-			ctx.fillStyle = LINE_OLDER_COLOR;
+			/*ctx.fillStyle = LINE_OLDER_COLOR;
 			ctx.beginPath();
 			ctx.moveTo(childX, childY);
 			ctx.lineTo(physicalCoords.x,physicalCoords.y);
-			ctx.stroke();
+			ctx.stroke();*/
 
 
 
@@ -437,7 +445,7 @@ $.fn.evoAnimate = function(props) {
 			step(data.steps[PLAY_STEP++]);
 		}
 		// Move to next generation
-		PLAY_GEN++;
+		//PLAY_GEN++;
 	}
 
 	/*
@@ -471,6 +479,7 @@ $.fn.evoAnimate = function(props) {
 				parent2x = parent2.x[x];
 				parent2y = parent2.x[y];
 			}
+
 			renderStep(x1, x2,  canvasObj, parent1x, parent1y, parent2x, parent2y, drawLine);
 			// "Fade" previous generation
 			if(undefined !== parent1 && undefined !== parent2) {
@@ -531,14 +540,44 @@ $.fn.evoAnimate = function(props) {
         	then = now - (elapsed % fpsInterval);
 			// If canvases are setup
 			if(isSetup()) {
-				stepGen(ANIMATION_DATA, PLAY_GEN);
+				/*stepGen(ANIMATION_DATA, PLAY_GEN);
 				// If we reached the last generation, stop playback
 				if(PLAY_GEN > LAST_GENERATION) {
 					stop();
 					return;
+				}*/
+				// Clear canvases
+				for(var i in CANVAS_ARR) {
+					var c = CANVAS_ARR[i];
+					c.ctx.clearRect(0, 0, c.width, c.height);
 				}
+				console.log(LAST_GEN_ADD_FRAME);
+				// Add generation to rendering
+				if(LAST_GEN_ADD_FRAME >= ADD_GENERATION_AFTER) {
+					LAST_ADDED_GENERATION++;
+					if(LAST_ADDED_GENERATION <= LAST_GENERATION) {
+						LAST_GEN_ADD_FRAME = 0;
+						//Add one generation
+						RENDERED_GENERATIONS.push(LAST_ADDED_GENERATION);
+						// Delete one
+						if(RENDERED_GENERATIONS.length > SHOWN_GENERATIONS_NUMBER) {
+							RENDERED_GENERATIONS.splice(0,1);
+						}
+					}
+				} else {
+					LAST_GEN_ADD_FRAME++;
+				}
+				console.log(RENDERED_GENERATIONS);
+				// Draw all shown generations every frame, remove and add according to the settings
+				for(var i in RENDERED_GENERATIONS) {
+					var currentGenID = RENDERED_GENERATIONS[i];
+					console.log('c: ' + currentGenID);
+					stepGen(ANIMATION_DATA, currentGenID);
+				}
+
 			}
 		}
+
 		// Request next frame
 		REQUEST_LOOP = window.requestAnimationFrame(animationLoop);
 	}
@@ -561,6 +600,11 @@ $.fn.evoAnimate = function(props) {
 			// Spawn canvas for every 2 dimensions
 			spawnCanvas(canvasId++, CANVAS_X_SETTING[i], currentSizeArr);
 		}
+		// Put the first generation into the proper array
+		RENDERED_GENERATIONS = [1];
+		// Reset some vars
+		LAST_GEN_ADD_FRAME = 0;
+		LAST_ADDED_GENERATION = 1;
 		IS_SETUP = true;
 	}
 
