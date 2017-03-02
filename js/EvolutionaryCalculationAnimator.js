@@ -81,7 +81,7 @@ $.fn.evoAnimate = function(props) {
 	//var PLAY_GEN = 1; // Current generation number //TODO: remove once new playback implementation is completed
 	var PLAY_STEP = 0; // Current step number
 	var LAST_GEN_ADD_FRAME = 0; // Stores the number of frames elasped since the last time we added a new generation to the playback
-	var LAST_ADDED_GENERATION = 1;
+	var LAST_ADDED_GENERATION = 1; // Id of the last generation added to the rendering
 
 
 	// Playback FPS limiting variables
@@ -92,8 +92,8 @@ $.fn.evoAnimate = function(props) {
 	var elapsed;
 
 	// Playback user settings
-	var SHOWN_GENERATIONS_NUMBER = 2; // Defines number of generations to be shown on the canvas e.g.: if 2, the last 2 generations will be shown. 0 = all generations.
-	var ADD_GENERATION_AFTER = 2; // Defines the frame interval at which a new generation is added e.g.: 25 -> a new generation is added every 25 frames
+	var SHOWN_GENERATIONS_NUMBER = 3; // Defines number of generations to be shown on the canvas e.g.: if 3, the last 3 generations will be shown. 0 = all generations.
+	var ADD_GENERATION_AFTER = 1; // Defines the frame interval at which a new generation is added e.g.: 25 -> a new generation is added every 25 frames
 
 
 	// Graphic settings
@@ -106,8 +106,8 @@ $.fn.evoAnimate = function(props) {
 	var POINT_OLDER_COLORS = '#0000FF';
 
 	// TODO: Implement!
-	var LINE_CURRENT_COLOR = '#FF0000';
-	var LINE_OLDER_COLOR = '#FF0000';
+	var LINE_CURRENT_COLOR = '#0000FF';
+	var LINE_OLDER_COLOR = '#000000';
 
 
 
@@ -332,6 +332,18 @@ $.fn.evoAnimate = function(props) {
 		return true === IS_SETUP ? true : false;
 	}
 	/*
+	* Check if given generation can be rendered
+	*/
+	function checkGenIsShown(genNum) {
+		// 0 indicates all generations are shown
+		if(0 === SHOWN_GENERATIONS_NUMBER)
+			return true;
+		for(var i in RENDERED_GENERATIONS)
+			if(RENDERED_GENERATIONS[i] === genNum)
+				return true;
+			return false;
+		}
+	/*
 	* Finds  step by id
 	* @param integer 	id 		Id of the step we are searching for
 	*/
@@ -367,7 +379,7 @@ $.fn.evoAnimate = function(props) {
 
 		// Add line from the previously drawn point
 		if(true === drawLine) {
-			ctx.fillStyle = '#FF0000';//LINE_CURRENT_COLOR;
+			ctx.strokeStyle = LINE_CURRENT_COLOR;
 			var prevCoords = coordinateTransform(ctxObj, prevX, prevY);
 			var prevCoords1 = coordinateTransform(ctxObj, prevX1, prevY1);
 			// Line to parent 1
@@ -389,8 +401,11 @@ $.fn.evoAnimate = function(props) {
 	* @param array 		parents 	Array of parents, should always be only 2
 	* @param integer 	childX 		Child's X coordinate
 	* @param integer 	childY 		Child's Y coordinate
+	* @param integer 	childGenId 	Child's generation ID
 	*/
-	function fadePoints(ctxObj, parents, childX, childY) {
+	function fadePoints(ctxObj, parents, childX, childY, childGenId) {
+		if(!checkGenIsShown(childGenId - 1))
+			return;
 		var ctx = ctxObj.ctx;
 		// X and Y axis values are stored via the indexes, which start with 1 (X1 = 1)
 		var x = ctxObj.xIndex - 1;
@@ -406,26 +421,27 @@ $.fn.evoAnimate = function(props) {
 			physicalCoords = coordinateTransform(ctxObj, parent.x[x], parent.x[y]);
 			ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
 			// Line to parents gets LINE_OLDER_COLOR
-			/*ctx.fillStyle = LINE_OLDER_COLOR;
+			ctx.strokeStyle = LINE_OLDER_COLOR;
 			ctx.beginPath();
 			ctx.moveTo(childX, childY);
 			ctx.lineTo(physicalCoords.x,physicalCoords.y);
-			ctx.stroke();*/
+			ctx.stroke();
 
+			// First check if we can show parents
+			if(checkGenIsShown(childGenId - 2)) {
+				// Parents of these parents get POINT_OLDER_COLORS
+				ctx.fillStyle = POINT_OLDER_COLORS;
+				var parent1 = -1 !== parent.parentIds[0] ? findStepById(parent.parentIds[0]) : undefined;
+				var parent2 = -1 !== parent.parentIds[1] ? findStepById(parent.parentIds[1]) : undefined;
 
-
-			// Parents of these parents get POINT_OLDER_COLORS
-			ctx.fillStyle = POINT_OLDER_COLORS;
-			var parent1 = -1 !== parent.parentIds[0] ? findStepById(parent.parentIds[0]) : undefined;
-			var parent2 = -1 !== parent.parentIds[1] ? findStepById(parent.parentIds[1]) : undefined;
-
-			if(undefined !== parent1) {
-				physicalCoords = coordinateTransform(ctxObj, parent1.x[x], parent1.x[y]);
-				ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
-			}
-			if(undefined !== parent2) {
-				physicalCoords = coordinateTransform(ctxObj, parent2.x[x], parent2.x[y]);
-				ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
+				if(undefined !== parent1) {
+					physicalCoords = coordinateTransform(ctxObj, parent1.x[x], parent1.x[y]);
+					ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
+				}
+				if(undefined !== parent2) {
+					physicalCoords = coordinateTransform(ctxObj, parent2.x[x], parent2.x[y]);
+					ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
+				}
 			}
 		}
 	}
@@ -480,10 +496,13 @@ $.fn.evoAnimate = function(props) {
 				parent2y = parent2.x[y];
 			}
 
+			// Draw line if it can be shown
+			drawLine = checkGenIsShown(stepData.generation - 1) ? drawLine : false;
+
 			renderStep(x1, x2,  canvasObj, parent1x, parent1y, parent2x, parent2y, drawLine);
 			// "Fade" previous generation
 			if(undefined !== parent1 && undefined !== parent2) {
-				fadePoints(canvasObj, [parent1, parent2], x1, x2);
+				fadePoints(canvasObj, [parent1, parent2], x1, x2, stepData.generation);
 			}
 		}
 	}
@@ -549,9 +568,9 @@ $.fn.evoAnimate = function(props) {
 				// Clear canvases
 				for(var i in CANVAS_ARR) {
 					var c = CANVAS_ARR[i];
-					c.ctx.clearRect(0, 0, c.width, c.height);
+					c.ctx.fillStyle = CANVAS_BG_COLOR;
+					c.ctx.fillRect(0, 0, c.width, c.height);
 				}
-				console.log(LAST_GEN_ADD_FRAME);
 				// Add generation to rendering
 				if(LAST_GEN_ADD_FRAME >= ADD_GENERATION_AFTER) {
 					LAST_ADDED_GENERATION++;
@@ -559,8 +578,8 @@ $.fn.evoAnimate = function(props) {
 						LAST_GEN_ADD_FRAME = 0;
 						//Add one generation
 						RENDERED_GENERATIONS.push(LAST_ADDED_GENERATION);
-						// Delete one
-						if(RENDERED_GENERATIONS.length > SHOWN_GENERATIONS_NUMBER) {
+						// Delete one, if there are more in the array than it is set in SHOWN_GENERATIONS_NUMBER
+						if(RENDERED_GENERATIONS.length > SHOWN_GENERATIONS_NUMBER && 0 !== SHOWN_GENERATIONS_NUMBER) {
 							RENDERED_GENERATIONS.splice(0,1);
 						}
 					}
@@ -571,7 +590,6 @@ $.fn.evoAnimate = function(props) {
 				// Draw all shown generations every frame, remove and add according to the settings
 				for(var i in RENDERED_GENERATIONS) {
 					var currentGenID = RENDERED_GENERATIONS[i];
-					console.log('c: ' + currentGenID);
 					stepGen(ANIMATION_DATA, currentGenID);
 				}
 
