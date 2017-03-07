@@ -11,6 +11,7 @@ var exampleInput  = ''+
 
 $(document).ready(function(){
 	$('#main').evoAnimate({
+		playOnLoad: false,
 		source: exampleInput,
 		sourceType: 'STRING',
 		display: [[1,2],[2,3]],

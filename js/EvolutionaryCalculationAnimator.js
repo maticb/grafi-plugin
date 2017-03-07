@@ -78,10 +78,10 @@ $.fn.evoAnimate = function(props) {
 	var IS_LOADED = false; // Boolean that indicates if any data is loaded (so we can start playback)
 	var IS_PLAYING = false; // Indicates if animation is playing
 	var IS_SETUP = false; // Indicates if canvas and other elements needed have been setup
-	//var PLAY_GEN = 1; // Current generation number //TODO: remove once new playback implementation is completed
 	var PLAY_STEP = 0; // Current step number
 	var LAST_GEN_ADD_FRAME = 0; // Stores the number of frames elasped since the last time we added a new generation to the playback
 	var LAST_ADDED_GENERATION = 1; // Id of the last generation added to the rendering
+
 
 
 	// Playback FPS limiting variables
@@ -171,7 +171,6 @@ $.fn.evoAnimate = function(props) {
 		// Data is loaded
 		IS_LOADED  = true;
 		// Reset steps if new data is loaded
-		//PLAY_GEN = 1;
 		PLAY_STEP = 0;
 		// Get problem's maximum range
 		setProblemRange(rtrn);
@@ -456,12 +455,11 @@ $.fn.evoAnimate = function(props) {
 		// Calculate the length of the current generation
 		var generationLength = (GENERATION_STARTS.length > genNumber ? GENERATION_STARTS[genNumber] : data.steps.length) - GENERATION_STARTS[genNumber - 1];
 		//Make sure step is set to the start of the generation
-		PLAY_STEP = GENERATION_STARTS[genNumber - 1];
+		var stepId = GENERATION_STARTS[genNumber - 1];
 		for(var i = 0; i < generationLength; i++) {
-			step(data.steps[PLAY_STEP++]);
+			step(data.steps[stepId++]);
 		}
-		// Move to next generation
-		//PLAY_GEN++;
+		PLAY_STEP = stepId;
 	}
 
 	/*
@@ -559,18 +557,6 @@ $.fn.evoAnimate = function(props) {
         	then = now - (elapsed % fpsInterval);
 			// If canvases are setup
 			if(isSetup()) {
-				/*stepGen(ANIMATION_DATA, PLAY_GEN);
-				// If we reached the last generation, stop playback
-				if(PLAY_GEN > LAST_GENERATION) {
-					stop();
-					return;
-				}*/
-				// Clear canvases
-				for(var i in CANVAS_ARR) {
-					var c = CANVAS_ARR[i];
-					c.ctx.fillStyle = CANVAS_BG_COLOR;
-					c.ctx.fillRect(0, 0, c.width, c.height);
-				}
 				// Add generation to rendering
 				if(LAST_GEN_ADD_FRAME >= ADD_GENERATION_AFTER) {
 					LAST_ADDED_GENERATION++;
@@ -586,19 +572,52 @@ $.fn.evoAnimate = function(props) {
 				} else {
 					LAST_GEN_ADD_FRAME++;
 				}
-				console.log(RENDERED_GENERATIONS);
-				// Draw all shown generations every frame, remove and add according to the settings
-				for(var i in RENDERED_GENERATIONS) {
-					var currentGenID = RENDERED_GENERATIONS[i];
-					stepGen(ANIMATION_DATA, currentGenID);
-				}
-
+				// Render all visible generations
+				// TODO: render by steps
+				renderGenerations();
 			}
 		}
 
 		// Request next frame
 		REQUEST_LOOP = window.requestAnimationFrame(animationLoop);
 	}
+
+	/*
+	* Main render loop, using generations
+	* If  lastGenId is above 0, lastGenStepId must be set. This will render all shown generations up to the lastGenId one, and only all steps up to lastGenStepId will be rendered in that one
+	* @param integer 	lastGenId			Id of last gen to render
+	* @param integer	lastGenStepId 		Id of the step to render up to in last generation
+	*/
+	function renderGenerations(lastGenId = -1, lastGenStepId = -1) {
+		// Clear canvases
+		for(var i in CANVAS_ARR) {
+			var c = CANVAS_ARR[i];
+			c.ctx.fillStyle = CANVAS_BG_COLOR;
+			c.ctx.fillRect(0, 0, c.width, c.height);
+		}
+		if(lastGenId < 0) {
+			// Draw all shown generations every frame, remove and add according to the settings
+			for(var i in RENDERED_GENERATIONS) {
+				var currentGenID = RENDERED_GENERATIONS[i];
+				stepGen(ANIMATION_DATA, currentGenID);
+			}
+		} else {
+			// First render all generations except the last one
+			for(var i in RENDERED_GENERATIONS) {
+				var currentGenID = RENDERED_GENERATIONS[i];
+				if(currentGenID < lastGenId)
+					stepGen(ANIMATION_DATA, currentGenID);
+			}
+			// Then render all steps in the last given generation up to the given step id
+			var startStep = GENERATION_STARTS[lastGenId - 1];
+			for(;startStep < lastGenStepId; startStep++) {
+				step(ANIMATION_DATA.steps[startStep]);
+			}
+			PLAY_STEP = startStep;
+		}
+	}
+
+
 
 	/*
 	* Setups the page for playback (proper number of canvas elements)
@@ -650,6 +669,69 @@ $.fn.evoAnimate = function(props) {
 			REQUEST_LOOP = undefined;
 		}
 	}
+
+	/*
+	* Check if we moved into a step that is a different generation, and should update rendered generations
+	*/
+	function checkRenderedGenerations(stepData) {
+		// If we are still in the same generation
+		if(LAST_ADDED_GENERATION  === stepData.generation)
+			return;
+		if(LAST_ADDED_GENERATION <= LAST_GENERATION) {
+			// Else increment to next generation
+			LAST_ADDED_GENERATION++;
+			LAST_GEN_ADD_FRAME = 0;
+			//Add one generation
+			RENDERED_GENERATIONS.push(LAST_ADDED_GENERATION);
+			// Delete one, if there are more in the array than it is set in SHOWN_GENERATIONS_NUMBER
+			if(RENDERED_GENERATIONS.length > SHOWN_GENERATIONS_NUMBER && 0 !== SHOWN_GENERATIONS_NUMBER) {
+				RENDERED_GENERATIONS.splice(0,1);
+			}
+		}
+	}
+
+	/*
+	* Moves one step forward
+	*/
+	var moveOneStepForward = function() {
+		if(!isSetup())
+			playSetup();
+		if(PLAY_STEP < ANIMATION_DATA.steps.length) {
+			var stepData = ANIMATION_DATA.steps[PLAY_STEP++];
+			checkRenderedGenerations(stepData);
+			renderGenerations(stepData.generation, PLAY_STEP);
+			//step(stepData);
+		}
+	};
+	/*
+	* Moves one step forward
+	*/
+	var moveOneStepBackward = function() {
+		if(!isSetup())
+			playSetup();
+		if(PLAY_STEP > 0) {
+			PLAY_STEP--;
+			var stepData = ANIMATION_DATA.steps[PLAY_STEP];
+			var currentGenId = stepData.generation;
+			// Because we are going backwards, special case generation check here
+			if(RENDERED_GENERATIONS[0] + SHOWN_GENERATIONS_NUMBER > currentGenId && (RENDERED_GENERATIONS[0] - 1) > 0) {
+				RENDERED_GENERATIONS.unshift(RENDERED_GENERATIONS[0] - 1);
+			}
+			// Remove any generations higher than the one we are currently rendering
+			for(var i = RENDERED_GENERATIONS.length - 1; i > -1 ;i--) {
+				if(RENDERED_GENERATIONS[i] > stepData.generation) {
+					LAST_ADDED_GENERATION = RENDERED_GENERATIONS[i] - 1;
+					RENDERED_GENERATIONS.splice(i, 1);
+				}
+			}
+			if(RENDERED_GENERATIONS.length > SHOWN_GENERATIONS_NUMBER && 0 !== SHOWN_GENERATIONS_NUMBER) {
+				RENDERED_GENERATIONS.splice(RENDERED_GENERATIONS.length - 1,1);
+			}
+			renderGenerations(stepData.generation, PLAY_STEP);
+			//step(stepData);
+		}
+	};
+
 
 	/*
 	* Transforms (scales) coordinates from problem dimensions to the physical dimensions on the canvas
@@ -716,8 +798,6 @@ $.fn.evoAnimate = function(props) {
 				var oY = e.offsetY;
 
 				var clickedPoints = findPointsOnClick(oX, oY, canvas);
-				// TODO: Implement, temporary alert with information
-				//console.log(clickedPoints);
 				var msg = 'Podatki o točki/točkah: \n ';
 				for(var i in clickedPoints) {
 					var p = clickedPoints[i];
@@ -817,7 +897,12 @@ $.fn.evoAnimate = function(props) {
 		var playOnLoad = props.hasOwnProperty('playOnLoad') ? props.playOnLoad : true;
 		if(playOnLoad) {
 			play();
+		} else {
+			playSetup();
 		}
+		stepF = moveOneStepForward;
+		stepB = moveOneStepBackward;
+		playBind = play;
 		// Event binds
 		bindEvents();
 		return true;
