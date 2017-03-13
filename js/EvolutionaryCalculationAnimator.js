@@ -824,6 +824,30 @@ $.fn.evoAnimate = function(props) {
 				}
 				if(clickedPoints.length)
 					alert(msg);
+
+				// Implementation of controls
+				var cw = canvas.width;
+				var ch = canvas.height;
+				// Top left corner is play/stop
+				if(oX < cw/2 && oY < ch/2) {
+					if(isPlaying())
+						stop();
+					else
+						play();
+				}
+				// Top right corner is generation step forward
+				if(oX > cw/2 && oY < ch/2) {
+					moveOneGenerationForward();
+				}
+				// Bottom left is step backward
+				if(oX < cw/2 && oY > ch/2) {
+					moveOneStepBackward();
+				}
+				// Bottom right is step forward
+				// Bottom left is step backward
+				if(oX > cw/2 && oY > ch/2) {
+					moveOneStepForward();
+				}
 			})
 			.off('contextmenu')
 			.on('contextmenu', function(e) {
