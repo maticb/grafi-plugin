@@ -451,7 +451,6 @@ $.fn.evoAnimate = function(props) {
 	* @param integer	genNumber	Generation number
 	*/
 	function stepGen(data, genNumber) {
-		// TODO: Fade points from previous generation!
 		// Calculate the length of the current generation
 		var generationLength = (GENERATION_STARTS.length > genNumber ? GENERATION_STARTS[genNumber] : data.steps.length) - GENERATION_STARTS[genNumber - 1];
 		//Make sure step is set to the start of the generation
@@ -557,24 +556,7 @@ $.fn.evoAnimate = function(props) {
         	then = now - (elapsed % fpsInterval);
 			// If canvases are setup
 			if(isSetup()) {
-				// Add generation to rendering
-				if(LAST_GEN_ADD_FRAME >= ADD_GENERATION_AFTER) {
-					LAST_ADDED_GENERATION++;
-					if(LAST_ADDED_GENERATION <= LAST_GENERATION) {
-						LAST_GEN_ADD_FRAME = 0;
-						//Add one generation
-						RENDERED_GENERATIONS.push(LAST_ADDED_GENERATION);
-						// Delete one, if there are more in the array than it is set in SHOWN_GENERATIONS_NUMBER
-						if(RENDERED_GENERATIONS.length > SHOWN_GENERATIONS_NUMBER && 0 !== SHOWN_GENERATIONS_NUMBER) {
-							RENDERED_GENERATIONS.splice(0,1);
-						}
-					}
-				} else {
-					LAST_GEN_ADD_FRAME++;
-				}
-				// Render all visible generations
-				// TODO: render by steps
-				renderGenerations();
+				moveOneStepForward();
 			}
 		}
 
@@ -722,6 +704,8 @@ $.fn.evoAnimate = function(props) {
 				if(RENDERED_GENERATIONS[i] > stepData.generation) {
 					LAST_ADDED_GENERATION = RENDERED_GENERATIONS[i] - 1;
 					RENDERED_GENERATIONS.splice(i, 1);
+				} else {
+					break;
 				}
 			}
 			if(RENDERED_GENERATIONS.length > SHOWN_GENERATIONS_NUMBER && 0 !== SHOWN_GENERATIONS_NUMBER) {
@@ -732,6 +716,41 @@ $.fn.evoAnimate = function(props) {
 		}
 	};
 
+	/*
+	* Moves one generation forward. If we are in the middle of a generation it will only complete that generation!
+	*/
+	var moveOneGenerationForward = function() {
+		// We willl use step forward function, so get the step ids from the array
+		var nextGenStartId = ANIMATION_DATA.steps.length;
+		for(var i in GENERATION_STARTS) {
+			var current = GENERATION_STARTS[i];
+			if(current > PLAY_STEP) {
+				nextGenStartId = current;
+				break;
+			}
+		}
+		while(PLAY_STEP < nextGenStartId) {
+			moveOneStepForward();
+		}
+	}
+
+	/*
+	* Moves one generation backwards. If we are in the middle of a generation it will only move to the last step of the previous generation!
+	*/
+	var moveOneGenerationBackward = function() {
+		// We willl use step forward function, so get the step ids from the array
+		var previousGenStartId = 0;
+		for(var i = GENERATION_STARTS.length; i >= 0; i--) {
+			var current = GENERATION_STARTS[i];
+			if(current < PLAY_STEP) {
+				previousGenStartId = current;
+				break;
+			}
+		}
+		while(PLAY_STEP > previousGenStartId) {
+			moveOneStepBackward();
+		}
+	}
 
 	/*
 	* Transforms (scales) coordinates from problem dimensions to the physical dimensions on the canvas
@@ -900,9 +919,13 @@ $.fn.evoAnimate = function(props) {
 		} else {
 			playSetup();
 		}
+		//TEMPORARY GLOBALS to  allow console use!
+		stepGenF = moveOneGenerationForward;
+		stepGenB = moveOneGenerationBackward;
 		stepF = moveOneStepForward;
 		stepB = moveOneStepBackward;
 		playBind = play;
+		stopBind = stop;
 		// Event binds
 		bindEvents();
 		return true;
