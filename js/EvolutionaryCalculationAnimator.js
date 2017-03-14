@@ -538,8 +538,9 @@ $.fn.evoAnimate = function(props) {
 		c.yIndex = parseInt(axisIds[1]);
 		//Create menu "layer"
 		c.canvasStack = new CanvasStack(id);
-		c.menuLayerID = c.canvasStack.createLayer();
-		c.menuLayerCtx = document.getElementById(c.menuLayerID).getContext('2d');
+		var menuLayerID = c.canvasStack.createLayer();
+		c.menuCanvas = $('#' + menuLayerID);
+		c.menuLayerCtx = document.getElementById(menuLayerID).getContext('2d');
 		// Push into array
 		CANVAS_ARR.push(c);
 	}
@@ -766,16 +767,29 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
-	* Find any points below the mouse click
+	* Find any points below the mouse click, that are rendered on the canvas currently
 	* @param integer 	offsetX 	X axis offset of the click (relative to canvas)
 	* @param integer 	offsetY 	Y axis offset of the click (relative to canvas)
 	* @param object 	canvasObj 	Canvas object clicked on
 	*/
 	function findPointsOnClick(offsetX, offsetY, canvasObj) {
+		function checkIfStepVisible(stepGeneration) {
+			for(var i in RENDERED_GENERATIONS) {
+				if(RENDERED_GENERATIONS[i] === stepGeneration)
+					return true;
+			}
+			return false;
+		}
 		// We can have multiple points near the same area, so use an array
 		var matchedSteps = [];
 		for(var i in ANIMATION_DATA.steps) {
 			var step = ANIMATION_DATA.steps[i];
+			// Check if step hasn't been rendered yet
+			if(step.id > PLAY_STEP + 1)
+				continue;
+			// Check if step is still visible (it is not in an older generation)
+			if(!checkIfStepVisible(step.generation))
+				continue;
 			var x = canvasObj.xIndex - 1;
 			var y = canvasObj.yIndex - 1;
 			var coords = coordinateTransform(canvasObj, step.x[x], step.x[y]);
@@ -808,12 +822,15 @@ $.fn.evoAnimate = function(props) {
 	*/
 	function bindEvents() {
 		$.each(CANVAS_ARR, function(key, value){
-			var $canvas = this.canvas;
+			var $canvas = this.menuCanvas;
 			$canvas
 			.off('click')
 			.on('click', function(e){
 				e.preventDefault();
-				var canvas = findCanvasInArr(e.currentTarget);
+				//We are on the menu layer canvas, find the background canvas by going to the canvasStack div wrapper and from there to the previous, parent, canvas
+				var canvasEl = $(e.currentTarget).closest('div').prev();
+
+				var canvas = findCanvasInArr(canvasEl[0]);
 				var oX = e.offsetX;
 				var oY = e.offsetY;
 
