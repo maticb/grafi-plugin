@@ -48,9 +48,9 @@ $('#selector').evoAnimate({
 
 
 $.fn.evoAnimate = function(props) {
-
 	// Static plugin private vars
 	var self = this;
+	var container = self;
 	var ARGS_NUM = 7; // Number of arguments in the first line of the input (this should never change, unless the format of the input string will change)
 	// Default values
 	var DEFAULT_CANVAS_SETTING = {
@@ -522,7 +522,6 @@ $.fn.evoAnimate = function(props) {
 	* @param array 		size		Array for canvas size: [300, 300] -> width: 300px, height: 300px
 	*/
 	function spawnCanvas(id, axisIds, size = undefined) {
-		var container = self;
 		// Clone default settings
 		var c = evolutionUtil.clone(DEFAULT_CANVAS_SETTING);
 		c.id = id;
@@ -532,13 +531,15 @@ $.fn.evoAnimate = function(props) {
 			c.height = size[1];
 		}
 		// Create a canvas element
-		c.canvas = $('<canvas/>').height(c.height).width(c.width).attr('height', c.height).attr('width', c.width);
+		c.canvas = $('<canvas/>').height(c.height).width(c.width).attr('height', c.height).attr('width', c.width).attr('id', id);
 		container.append(c.canvas);
 		c.ctx = c.canvas[0].getContext('2d');
 		c.xIndex = parseInt(axisIds[0]);
 		c.yIndex = parseInt(axisIds[1]);
-		// Add a button that shows/hides controls
-		//TODO:
+		//Create menu "layer"
+		c.canvasStack = new CanvasStack(id);
+		c.menuLayerID = c.canvasStack.createLayer();
+		c.menuLayerCtx = document.getElementById(c.menuLayerID).getContext('2d');
 		// Push into array
 		CANVAS_ARR.push(c);
 	}
@@ -862,6 +863,9 @@ $.fn.evoAnimate = function(props) {
 	* Function that checks the given properties and initializes the plugin
 	*/
 	function initialize() {
+		container.append('<div/>');
+		container = container.find('div:first-child')
+		container.addClass('evoAnimateContainer');
 		// Source
 		if(!props.hasOwnProperty('source')) {
 			// TODO: friendlier error messages
