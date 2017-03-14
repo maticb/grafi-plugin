@@ -110,6 +110,11 @@ $.fn.evoAnimate = function(props) {
 	var LINE_OLDER_COLOR = '#000000';
 
 
+	// Menu layer globals
+	var MENU_SHOWN = false;
+	var MENU_BUTTON_SHOWN = false;
+
+
 
 
 	/*
@@ -767,6 +772,39 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
+	* Display button that opens menu
+	* @param object 	ctx 	Canvas context to draw on
+	* @param boolean 	show 	Boolean indicating whether to hide or show button
+	*/
+	function menuButtonShow(ctx, show = false) {
+		if(show === MENU_BUTTON_SHOWN)
+			return;
+		if(true === show) {
+			//TODO: show some sort of graphic for menu button
+			ctx.fillStyle = '#000000';
+			ctx.fillRect(0,0,30,30);
+			MENU_BUTTON_SHOWN = true;
+		} else {
+			ctx.clearRect(0,0,30,30);
+			MENU_BUTTON_SHOWN = false;
+		}
+	}
+
+	/*
+	* Function that displays menu when clicking on the show menu button
+	* @param object 	ctx 	Canvas context to draw on
+	*/
+	function menuButtonClicked(ctx) {
+		if(false === MENU_SHOWN) {
+			//TODO: show menu
+			MENU_SHOWN = true;
+		} else {
+			//TODO: hide menu
+			MENU_SHOWN = false;
+		}
+	}
+
+	/*
 	* Find any points below the mouse click, that are rendered on the canvas currently
 	* @param integer 	offsetX 	X axis offset of the click (relative to canvas)
 	* @param integer 	offsetY 	Y axis offset of the click (relative to canvas)
@@ -841,7 +879,7 @@ $.fn.evoAnimate = function(props) {
 					msg += 'Id: ' + p.id + ', Fitness: ' + p.fitness + ', Generation: ' + p.generation + ' \n ' ;
 				}
 				if(clickedPoints.length)
-					alert(msg);
+					alert(msg); // TODO: update display to some sort of usable format
 
 				// Implementation of controls
 				var cw = canvas.width;
@@ -866,12 +904,38 @@ $.fn.evoAnimate = function(props) {
 				if(oX > cw/2 && oY > ch/2) {
 					moveOneStepForward();
 				}
+
+				// Menu button
+				if( oX < 30 && oY < 30) {
+					menuButtonClicked();
+				}
 			})
 			.off('contextmenu')
 			.on('contextmenu', function(e) {
 				e.preventDefault();
 				// TODO: contextmenu click on points!
 			});
+			// Mousemove event for displaying menu button
+			$canvas
+			.off('mousemove')
+			.on('mousemove', function(e){
+				e.preventDefault();
+				var canvasCtx = this.getContext('2d');
+				var oX = e.offsetX;
+				var oY = e.offsetY;
+				// Menu icon will be in the top left corner, for ease of calculation
+				if( oX < 30 && oY < 30) {
+					menuButtonShow(canvasCtx, true);
+				} else {
+					menuButtonShow(canvasCtx, false);
+				}
+			});
+
+			$canvas
+			.off('mouseleave')
+			.on('mouseleave',function(e){
+				menuButtonShow(this.getContext('2d'), false);
+			})
 
 		});
 	}
