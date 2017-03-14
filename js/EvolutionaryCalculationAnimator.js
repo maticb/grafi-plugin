@@ -955,7 +955,12 @@ $.fn.evoAnimate = function(props) {
 		return true;
 	}
 	// 	Initialize the plugin
+	// Functions that are to be accessible from outside
 	this.play = play;
 	this.stop = stop;
+	this.stepForward = moveOneStepForward;
+	this.stepBack = moveOneStepBackward;
+	this.stepGenerationForward = moveOneGenerationForward;
+	this.stepGenerationBackward = moveOneGenerationBackward;
 	return initialize() ? this : false;
 };
