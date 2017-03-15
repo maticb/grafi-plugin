@@ -71,3 +71,15 @@ evolutionUtil.getProp = function(obj, propName, propType = null) {
 evolutionUtil.clone = function(obj) {
 	return JSON.parse(JSON.stringify(obj));
 }
+/*
+* Creates random ID number
+*/
+evolutionUtil.guid = function() {
+	function s4() {
+		return Math.floor((1 + Math.random()) * 0x10000)
+		.toString(16)
+		.substring(1);
+	}
+	return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+	s4() + '-' + s4() + s4() + s4();
+}

@@ -97,17 +97,15 @@ $.fn.evoAnimate = function(props) {
 
 
 	// Graphic settings
-	// TODO: Implement!
 	var CANVAS_BG_COLOR = '#FFFFFF';
 
-	// TODO: Implement!
+	// Point colors
 	var POINT_CURRENT_COLOR = '#FF0000';
 	var POINT_PREVIOUS_GEN_COLOR = '#00FF00';
 	var POINT_OLDER_COLORS = '#0000FF';
 
-	// TODO: Implement!
-	var LINE_CURRENT_COLOR = '#0000FF';
-	var LINE_OLDER_COLOR = '#000000';
+	// Line color
+	var LINE_CURRENT_COLOR = '#000000';
 
 
 	// Menu layer globals
@@ -337,6 +335,7 @@ $.fn.evoAnimate = function(props) {
 	}
 	/*
 	* Check if given generation can be rendered
+	* @param integer genNum 	Generation number
 	*/
 	function checkGenIsShown(genNum) {
 		// 0 indicates all generations are shown
@@ -366,16 +365,13 @@ $.fn.evoAnimate = function(props) {
 
 	/*
 	* Render a step on a given canvas
-	* @param integer 	x 			X coordinate
-	* @param integer 	y 			Y coordinate
-	* @param object 	ctxObj 		Object with canvas data
-	* @param integer 	prevX 		X coordinate of parent 1
-	* @param integer 	prevY 		Y coordinate of parent 1
-	* @param integer 	prevX1 		X coordinate of parent 2
-	* @param integer 	prevY1 		Y coordinate of parent 2
-	* @param boolean 	drawLine 	Indicates if line is to be drawn from current point to parents
+	* @param integer 	x 				X coordinate
+	* @param integer 	y 				Y coordinate
+	* @param object 	ctxObj 			Object with canvas data
+	* @param array 		parentCoords 	 Array of coordinate objects for N parents
+	* @param boolean 	drawLine 		Indicates if line is to be drawn from current point to parents
 	*/
-	function renderStep(x, y = 0, ctxObj, prevX = 0, prevY = 0, prevX1 = 0, prevY1 = 1,  drawLine = true) {
+	function renderStep(x, y = 0, ctxObj, parentCoords,  drawLine = true) {
 		var ctx = ctxObj.ctx;
 		ctx.fillStyle = POINT_CURRENT_COLOR;
 		var physicalCoords = coordinateTransform(ctxObj, x, y);
@@ -384,18 +380,14 @@ $.fn.evoAnimate = function(props) {
 		// Add line from the previously drawn point
 		if(true === drawLine) {
 			ctx.strokeStyle = LINE_CURRENT_COLOR;
-			var prevCoords = coordinateTransform(ctxObj, prevX, prevY);
-			var prevCoords1 = coordinateTransform(ctxObj, prevX1, prevY1);
-			// Line to parent 1
-			ctx.beginPath();
-			ctx.moveTo(prevCoords.x, prevCoords.y);
-			ctx.lineTo(physicalCoords.x,physicalCoords.y);
-			ctx.stroke();
-			// Line to parent 2
-			ctx.beginPath();
-			ctx.moveTo(prevCoords1.x, prevCoords1.y);
-			ctx.lineTo(physicalCoords.x,physicalCoords.y);
-			ctx.stroke();
+			for(var i in parentCoords) {
+				var coords = parentCoords[i];
+				prevCoords = coordinateTransform(ctxObj, coords.x, coords.y);
+				ctx.beginPath();
+				ctx.moveTo(prevCoords.x, prevCoords.y);
+				ctx.lineTo(physicalCoords.x,physicalCoords.y);
+				ctx.stroke();
+			}
 		}
 	}
 
@@ -425,25 +417,21 @@ $.fn.evoAnimate = function(props) {
 			physicalCoords = coordinateTransform(ctxObj, parent.x[x], parent.x[y]);
 			ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
 			// Line to parents gets LINE_OLDER_COLOR
-			ctx.strokeStyle = LINE_OLDER_COLOR;
+			/*ctx.strokeStyle = LINE_OLDER_COLOR;
 			ctx.beginPath();
 			ctx.moveTo(childX, childY);
 			ctx.lineTo(physicalCoords.x,physicalCoords.y);
-			ctx.stroke();
+			ctx.stroke();*/
 
 			// First check if we can show parents
 			if(checkGenIsShown(childGenId - 2)) {
 				// Parents of these parents get POINT_OLDER_COLORS
 				ctx.fillStyle = POINT_OLDER_COLORS;
-				var parent1 = -1 !== parent.parentIds[0] ? findStepById(parent.parentIds[0]) : undefined;
-				var parent2 = -1 !== parent.parentIds[1] ? findStepById(parent.parentIds[1]) : undefined;
-
-				if(undefined !== parent1) {
-					physicalCoords = coordinateTransform(ctxObj, parent1.x[x], parent1.x[y]);
-					ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
-				}
-				if(undefined !== parent2) {
-					physicalCoords = coordinateTransform(ctxObj, parent2.x[x], parent2.x[y]);
+				for(var i in parent.parentIds) {
+					var parentsParent = -1 !== parent.parentIds[i] ? findStepById(parent.parentIds[i]) : undefined;
+					if(undefined === parentsParent)
+						continue;
+					physicalCoords = coordinateTransform(ctxObj, parentsParent.x[x], parentsParent.x[y]);
 					ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
 				}
 			}
@@ -471,8 +459,12 @@ $.fn.evoAnimate = function(props) {
 	* @param object 	stepData 	Data object for the current step
 	*/
 	function step(stepData) {
-		var parent1 = -1 !== stepData.parentIds[0] ? findStepById(stepData.parentIds[0]) : undefined;
-		var parent2 = -1 !== stepData.parentIds[1] ? findStepById(stepData.parentIds[1]) : undefined;
+		var hasAtLeastOneParent = false;
+		var parents = [];
+		for(var i in stepData.parentIds) {
+			var parent = -1 !== stepData.parentIds[i] ? findStepById(stepData.parentIds[i]) : undefined;
+			parents.push(parent);
+		}
 		// Loop throught all the x values of the step
 		// Loop throught all canvases, because all canvases will have a change on every step!
 		for(var i in CANVAS_ARR) {
@@ -485,26 +477,23 @@ $.fn.evoAnimate = function(props) {
 			var x2 = stepData.x[y];
 			// Check if parents exsist
 			var drawLine = false;
-			var parent1x = 0, parent1y = 0;
-			var parent2x = 0, parent2y = 0;
-			if(undefined !== parent1) {
-				drawLine = true;
-				parent1x = parent1.x[x];
-				parent1y = parent1.x[y];
-			}
-			if(undefined !== parent2) {
-				drawLine = true;
-				parent2x = parent2.x[x];
-				parent2y = parent2.x[y];
+			var parentCoords = [];
+			hasAtLeastOneParent = false;
+			// Push parnet coordinates for current canvas
+			for(var i in parents) {
+				parent = parents[i];
+				if(undefined !== parent) {
+					parentCoords.push({ x: parent.x[x], y: parent.x[y] });
+					hasAtLeastOneParent = true;
+				}
 			}
 
-			// Draw line if it can be shown
-			drawLine = checkGenIsShown(stepData.generation - 1) ? drawLine : false;
-
-			renderStep(x1, x2,  canvasObj, parent1x, parent1y, parent2x, parent2y, drawLine);
+			// Draw line if it can be shown (only draw lines for the very last generation)
+			drawLine = RENDERED_GENERATIONS[RENDERED_GENERATIONS.length - 1] === stepData.generation ? true : false;
+			renderStep(x1, x2, canvasObj, parentCoords, drawLine);
 			// "Fade" previous generation
-			if(undefined !== parent1 && undefined !== parent2) {
-				fadePoints(canvasObj, [parent1, parent2], x1, x2, stepData.generation);
+			if(hasAtLeastOneParent) {
+				fadePoints(canvasObj, parents, x1, x2, stepData.generation);
 			}
 		}
 	}
@@ -529,23 +518,34 @@ $.fn.evoAnimate = function(props) {
 	function spawnCanvas(id, axisIds, size = undefined) {
 		// Clone default settings
 		var c = evolutionUtil.clone(DEFAULT_CANVAS_SETTING);
+		id = id + '_' +  evolutionUtil.guid();
 		c.id = id;
 		//Set size
 		if($.isArray(size)) {
 			c.width = size[0];
 			c.height = size[1];
 		}
-		// Create a canvas element
+		c.xIndex = parseInt(axisIds[0]);
+		c.yIndex = parseInt(axisIds[1]);
+
+		// Create a canvas element (background)
 		c.canvas = $('<canvas/>').height(c.height).width(c.width).attr('height', c.height).attr('width', c.width).attr('id', id);
 		container.append(c.canvas);
 		c.ctx = c.canvas[0].getContext('2d');
-		c.xIndex = parseInt(axisIds[0]);
-		c.yIndex = parseInt(axisIds[1]);
-		//Create menu "layer"
+
+		// Create canvasStack object
 		c.canvasStack = new CanvasStack(id);
-		var menuLayerID = c.canvasStack.createLayer();
-		c.menuCanvas = $('#' + menuLayerID);
-		c.menuLayerCtx = document.getElementById(menuLayerID).getContext('2d');
+
+		// Create info layer
+		var tmpID = c.canvasStack.createLayer();
+		c.infoCanvas = $('#' + tmpID);
+		c.infoLayerCtx = c.infoCanvas[0].getContext('2d');
+
+		//Create menu "layer"
+		tmpID = c.canvasStack.createLayer();
+		c.menuCanvas = $('#' + tmpID);
+		c.menuLayerCtx = c.menuCanvas[0].getContext('2d');
+
 		// Push into array
 		CANVAS_ARR.push(c);
 	}
@@ -811,13 +811,6 @@ $.fn.evoAnimate = function(props) {
 	* @param object 	canvasObj 	Canvas object clicked on
 	*/
 	function findPointsOnClick(offsetX, offsetY, canvasObj) {
-		function checkIfStepVisible(stepGeneration) {
-			for(var i in RENDERED_GENERATIONS) {
-				if(RENDERED_GENERATIONS[i] === stepGeneration)
-					return true;
-			}
-			return false;
-		}
 		// We can have multiple points near the same area, so use an array
 		var matchedSteps = [];
 		for(var i in ANIMATION_DATA.steps) {
@@ -826,7 +819,7 @@ $.fn.evoAnimate = function(props) {
 			if(step.id > PLAY_STEP + 1)
 				continue;
 			// Check if step is still visible (it is not in an older generation)
-			if(!checkIfStepVisible(step.generation))
+			if(!checkGenIsShown(step.generation))
 				continue;
 			var x = canvasObj.xIndex - 1;
 			var y = canvasObj.yIndex - 1;
