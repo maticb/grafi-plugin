@@ -112,6 +112,12 @@ $.fn.evoAnimate = function(props) {
 	var MENU_SHOWN = false;
 	var MENU_BUTTON_SHOWN = false;
 
+	// Shades for history of each canvas
+	// We count the number of steps that have hit the same pixel, and add darker shades to pixels that have had more steps on them, to display algorithm search area
+	var CANVAS_SHADES_NUM = 10;
+	var CANVAS_SHADES_COLORS = []; // Array of CANVAS_SHADES_NUM colors
+	var CANVAS_SHADES = {}; // Array that stores numbers, at which a certain shade should start
+
 
 
 
@@ -133,6 +139,57 @@ $.fn.evoAnimate = function(props) {
 		data.problemRange = (max - min);
 		data.problemPadding = data.problemRange * 0.1;
 		data.problemRange *= 1.2; // Add some padding on the edges
+	}
+	/*
+	* Calculates number of steps that have hit each pixel, to calculate proper shading values (for each canvas seperately)
+	* @param object 	data 		Object with algorithm data
+	* @param object 	canvasObj 	Canvas object
+	*/
+	function calculateShades(data, canvasObj) {
+		var x = canvasObj.xIndex - 1;
+		var y = canvasObj.yIndex - 1;
+		var numOfShades = CANVAS_SHADES_NUM; // Number of shades
+		//Crate 2d array of same dimensions as the canvas
+		var array = new Array();
+		for(var i = 0; i < canvasObj.width; i++){
+			var row = [];
+			for(var j = 0; j < canvasObj.height; j++)
+				row.push(0);
+			array.push(row);
+		}
+		for(var i in data.steps) {
+			var step = data.steps[i];
+			var coords = coordinateTransform(canvasObj, step.x[x], step.x[y]);
+			coords.x = Math.floor(coords.x);
+			coords.y = Math.floor(coords.y);
+			array[coords.x][coords.y]++;
+		}
+		var max = -1;
+		for(var i in array){
+			var row = array[i];
+			for(var j in row) {
+				var cell = row[j];
+				if(cell > max)
+					max = cell;
+			}
+		}
+		var shadeStarts = [];
+		for(var i = 0; i < numOfShades; i++)
+			shadeStarts.push(0);
+
+		if(max < numOfShades) {
+			var iterator = numOfShades - 1;
+			for(var i = max; i > 0 ; i--)
+				shadeStarts[iterator--] = i
+		} else {
+			var division = numOfShades / max;
+			var start = division;
+			var iterator = 0;
+			for(; start < max ; start += division)
+				shadeStarts[iterator++] = start;
+		}
+		CANVAS_SHADES[canvasObj.id] = shadeStarts;
+		console.log(CANVAS_SHADES);
 	}
 
 	/*
@@ -548,6 +605,7 @@ $.fn.evoAnimate = function(props) {
 
 		// Push into array
 		CANVAS_ARR.push(c);
+		return c;
 	}
 
 	/*
@@ -612,7 +670,7 @@ $.fn.evoAnimate = function(props) {
 	* Setups the page for playback (proper number of canvas elements)
 	* @param object 	data 	Data object for the algorithm we are currently animating
 	*/
-	function playSetup(data) {
+	function playSetup() {
 		// Do not reset canvases
 		if(isSetup())
 			return;
@@ -624,7 +682,9 @@ $.fn.evoAnimate = function(props) {
 		for(var i in CANVAS_X_SETTING) {
 			var currentSizeArr = oneSize ? CANVAS_SIZE_SETTING[0] : CANVAS_SIZE_SETTING[i];
 			// Spawn canvas for every 2 dimensions
-			spawnCanvas(canvasId++, CANVAS_X_SETTING[i], currentSizeArr);
+			var newCanvas = spawnCanvas(canvasId++, CANVAS_X_SETTING[i], currentSizeArr);
+			// Calculate shades for this canvas
+			calculateShades(ANIMATION_DATA, newCanvas);
 		}
 		// Put the first generation into the proper array
 		RENDERED_GENERATIONS = [1];
