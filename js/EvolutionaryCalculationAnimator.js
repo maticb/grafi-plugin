@@ -701,8 +701,7 @@ $.fn.evoAnimate = function(props) {
 		// Clear canvases
 		for(var i in CANVAS_ARR) {
 			var c = CANVAS_ARR[i];
-			//c.bgLayerCtx.fillStyle = CANVAS_BG_COLOR;
-			//c.bgLayerCtx.fillRect(0, 0, c.width, c.height);
+			c.bgLayerCtx.clearRect(0, 0, c.width, c.height);
 			c.renderLayerCtx.clearRect(0, 0, c.width, c.height);
 			// Clear shades counter
 			c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width, c.height);
@@ -714,6 +713,24 @@ $.fn.evoAnimate = function(props) {
 				stepGen(ANIMATION_DATA, currentGenID);
 			}
 		} else {
+			// Shading for points of generations not shown (all those in front of the first generation in RENDERED_GENERATIONS)
+			var firstShownStep = GENERATION_STARTS[RENDERED_GENERATIONS[0] - 1];
+			for(var i = 0; i < firstShownStep; i++) {
+				var stepData = ANIMATION_DATA.steps[i];
+				for(var j in CANVAS_ARR) {
+					var canvasObj = CANVAS_ARR[j];
+					// X and Y axis values are stored via the i ndexes, which start with 1 (X1 = 1)
+					var x = canvasObj.xIndex - 1;
+					var y = canvasObj.yIndex - 1;
+					// Get actual values from current step data
+					var x1 = stepData.x[x];
+					var x2 = stepData.x[y];
+
+					// Increment shaders
+					incrementShadeOnPoint(canvasObj, x1, x2, true, false);
+				}
+			}
+
 			// First render all generations except the last one
 			for(var i in RENDERED_GENERATIONS) {
 				var currentGenID = RENDERED_GENERATIONS[i];
