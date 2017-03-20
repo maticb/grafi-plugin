@@ -61,7 +61,7 @@ $.fn.evoAnimate = function(props) {
 		height: 300,
 		xIndex: 1, // Index of the algorithm step's X value to be displayed on this canvas's x axis
 		yIndex: 1, // Same for the y axis
-		shadeCounter: [],
+		shadeStartsCounter: [],
 	};
 
 	// Non-static private vars
@@ -150,14 +150,10 @@ $.fn.evoAnimate = function(props) {
 		var x = canvasObj.xIndex - 1;
 		var y = canvasObj.yIndex - 1;
 		var numOfShades = CANVAS_SHADES_NUM; // Number of shades
+
 		//Crate 2d array of same dimensions as the canvas
-		var array = new Array();
-		for(var i = 0; i < canvasObj.width; i++){
-			var row = [];
-			for(var j = 0; j < canvasObj.height; j++)
-				row.push(0);
-			array.push(row);
-		}
+		var array = evolutionUtil.fill2DArray(new Array(), canvasObj.width, canvasObj.height);
+
 		// Count amount of steps on the same pixel
 		for(var i in data.steps) {
 			var step = data.steps[i];
@@ -194,6 +190,35 @@ $.fn.evoAnimate = function(props) {
 				shadeStarts[iterator++] = start;
 		}
 		CANVAS_SHADES[canvasObj.id] = shadeStarts;
+	}
+
+
+	/*
+	* Increments shade starts counter array on the given position
+	* @param object 		canvasObj 		Canvas object
+	* @param integer 		x 				X coordinate
+	* @param integer 		y 				Y coordinate
+	* @param boolean 		render 			Indicates whether the shades should be rendered
+	* @param boolean 		transformed 	Indicates if coordinates have already bene transformed
+	*/
+	function incrementShadeOnPoint(canvasObj, x, y, render = true, transformed = true) {
+		if(!transformed) {
+			var coords = coordinateTransform(canvasObj, x, y);
+			x = coords.x;
+			y = coords.y;
+		}
+		x = Math.floor(x);
+		y = Math.floor(y);
+		// Inline undefined checks
+		return (undefined === canvasObj.shadeStartsCounter[x] ? -1 :  undefined === canvasObj.shadeStartsCounter[x][y] ? -1 : canvasObj.shadeStartsCounter[x][y]++) + 1;
+	}
+
+	/*
+	* Renders shades on each pixel
+	* @param object 		canvasObj 		Canvas object
+	*/
+	function renderShades(canvasObj) {
+		// TODO
 	}
 
 	/*
@@ -428,14 +453,14 @@ $.fn.evoAnimate = function(props) {
 	* Render a step on a given canvas
 	* @param integer 	x 				X coordinate
 	* @param integer 	y 				Y coordinate
-	* @param object 	ctxObj 			Object with canvas data
+	* @param object 	canvasObj 			Object with canvas data
 	* @param array 		parentCoords 	 Array of coordinate objects for N parents
 	* @param boolean 	drawLine 		Indicates if line is to be drawn from current point to parents
 	*/
-	function renderStep(x, y = 0, ctxObj, parentCoords,  drawLine = true) {
-		var ctx = ctxObj.ctx;
+	function renderStep(x, y = 0, canvasObj, parentCoords,  drawLine = true) {
+		var ctx = canvasObj.ctx;
 		ctx.fillStyle = POINT_CURRENT_COLOR;
-		var physicalCoords = coordinateTransform(ctxObj, x, y);
+		var physicalCoords = coordinateTransform(canvasObj, x, y);
 		ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
 
 		// Add line from the previously drawn point
@@ -443,13 +468,15 @@ $.fn.evoAnimate = function(props) {
 			ctx.strokeStyle = LINE_CURRENT_COLOR;
 			for(var i in parentCoords) {
 				var coords = parentCoords[i];
-				prevCoords = coordinateTransform(ctxObj, coords.x, coords.y);
+				prevCoords = coordinateTransform(canvasObj, coords.x, coords.y);
 				ctx.beginPath();
 				ctx.moveTo(prevCoords.x, prevCoords.y);
-				ctx.lineTo(physicalCoords.x,physicalCoords.y);
+				ctx.lineTo(physicalCoords.x, physicalCoords.y);
 				ctx.stroke();
 			}
 		}
+		// Increment shades
+		incrementShadeOnPoint(canvasObj, physicalCoords.x, physicalCoords.y);
 	}
 
 	/*
@@ -536,7 +563,7 @@ $.fn.evoAnimate = function(props) {
 			// Get actual values from current step data
 			var x1 = stepData.x[x];
 			var x2 = stepData.x[y];
-			// Check if parents exsist
+			// Check if parents exist
 			var drawLine = false;
 			var parentCoords = [];
 			hasAtLeastOneParent = false;
@@ -552,6 +579,7 @@ $.fn.evoAnimate = function(props) {
 			// Draw line if it can be shown (only draw lines for the very last generation)
 			drawLine = RENDERED_GENERATIONS[RENDERED_GENERATIONS.length - 1] === stepData.generation ? true : false;
 			renderStep(x1, x2, canvasObj, parentCoords, drawLine);
+
 			// "Fade" previous generation
 			if(hasAtLeastOneParent) {
 				fadePoints(canvasObj, parents, x1, x2, stepData.generation);
@@ -607,6 +635,8 @@ $.fn.evoAnimate = function(props) {
 		c.menuCanvas = $('#' + tmpID);
 		c.menuLayerCtx = c.menuCanvas[0].getContext('2d');
 
+		// Fill shade starts counter array with zeroes
+		c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width, c.height);
 		// Push into array
 		CANVAS_ARR.push(c);
 		return c;
@@ -645,6 +675,8 @@ $.fn.evoAnimate = function(props) {
 			var c = CANVAS_ARR[i];
 			c.ctx.fillStyle = CANVAS_BG_COLOR;
 			c.ctx.fillRect(0, 0, c.width, c.height);
+			// Clear shades counter
+			c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width, c.height);
 		}
 		if(lastGenId < 0) {
 			// Draw all shown generations every frame, remove and add according to the settings
@@ -753,7 +785,6 @@ $.fn.evoAnimate = function(props) {
 			var stepData = ANIMATION_DATA.steps[PLAY_STEP++];
 			checkRenderedGenerations(stepData);
 			renderGenerations(stepData.generation, PLAY_STEP);
-			//step(stepData);
 		}
 	};
 	/*
@@ -783,7 +814,6 @@ $.fn.evoAnimate = function(props) {
 				RENDERED_GENERATIONS.splice(RENDERED_GENERATIONS.length - 1,1);
 			}
 			renderGenerations(stepData.generation, PLAY_STEP);
-			//step(stepData);
 		}
 	};
 

@@ -83,3 +83,22 @@ evolutionUtil.guid = function() {
 	return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
 	s4() + '-' + s4() + s4() + s4();
 }
+
+
+/*
+* Fills a 2D array with given values
+* @param array 		arr 		Given array object
+* @param integer 	x 			Array width
+* @param integer 	y 			Array height
+* @param any 		item 		Item to fill array with
+*/
+evolutionUtil.fill2DArray = function(arr, x, y, item = 0) {
+	arr = [];
+	for(var i = 0; i < x; i++) {
+		var row = [];
+		for(var j = 0; j < y; j++)
+			row.push(item);
+		arr.push(row);
+	}
+	return arr;
+};
