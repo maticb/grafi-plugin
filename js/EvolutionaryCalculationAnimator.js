@@ -61,6 +61,7 @@ $.fn.evoAnimate = function(props) {
 		height: 300,
 		xIndex: 1, // Index of the algorithm step's X value to be displayed on this canvas's x axis
 		yIndex: 1, // Same for the y axis
+		shadeCounter: [],
 	};
 
 	// Non-static private vars
@@ -157,6 +158,7 @@ $.fn.evoAnimate = function(props) {
 				row.push(0);
 			array.push(row);
 		}
+		// Count amount of steps on the same pixel
 		for(var i in data.steps) {
 			var step = data.steps[i];
 			var coords = coordinateTransform(canvasObj, step.x[x], step.x[y]);
@@ -164,6 +166,7 @@ $.fn.evoAnimate = function(props) {
 			coords.y = Math.floor(coords.y);
 			array[coords.x][coords.y]++;
 		}
+		// Find the cell with the maximum amount of steps on it
 		var max = -1;
 		for(var i in array){
 			var row = array[i];
@@ -173,15 +176,17 @@ $.fn.evoAnimate = function(props) {
 					max = cell;
 			}
 		}
+		// Create array of zeroes with size: numOfShades
 		var shadeStarts = [];
 		for(var i = 0; i < numOfShades; i++)
 			shadeStarts.push(0);
-
+		// If maximum hits is less than number of shades simply put them in order from front to back
 		if(max < numOfShades) {
 			var iterator = numOfShades - 1;
 			for(var i = max; i > 0 ; i--)
 				shadeStarts[iterator--] = i
 		} else {
+			// Else calculate step (divison) and fill the array by adding it
 			var division = numOfShades / max;
 			var start = division;
 			var iterator = 0;
@@ -189,7 +194,6 @@ $.fn.evoAnimate = function(props) {
 				shadeStarts[iterator++] = start;
 		}
 		CANVAS_SHADES[canvasObj.id] = shadeStarts;
-		console.log(CANVAS_SHADES);
 	}
 
 	/*
@@ -953,11 +957,9 @@ $.fn.evoAnimate = function(props) {
 					moveOneStepBackward();
 				}
 				// Bottom right is step forward
-				// Bottom left is step backward
 				if(oX > cw/2 && oY > ch/2) {
 					moveOneStepForward();
 				}
-
 				// Menu button
 				if( oX < 30 && oY < 30) {
 					menuButtonClicked();
