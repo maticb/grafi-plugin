@@ -116,7 +116,7 @@ $.fn.evoAnimate = function(props) {
 	// Shades for history of each canvas
 	// We count the number of steps that have hit the same pixel, and add darker shades to pixels that have had more steps on them, to display algorithm search area
 	var CANVAS_SHADES_NUM = 10;
-	var CANVAS_SHADES_COLORS = []; // Array of CANVAS_SHADES_NUM colors
+	var CANVAS_SHADES_COLORS = ['#E5E5E5', '#CBCBCB', '#B1B1B1', '#979797', '#7D7D7D', '#636363', '	#494949', '#2F2F2F', '#151515', '#000000']; // Array of CANVAS_SHADES_NUM colors
 	var CANVAS_SHADES = {}; // Array that stores numbers, at which a certain shade should start
 
 
@@ -149,7 +149,8 @@ $.fn.evoAnimate = function(props) {
 	function calculateShades(data, canvasObj) {
 		var x = canvasObj.xIndex - 1;
 		var y = canvasObj.yIndex - 1;
-		var numOfShades = CANVAS_SHADES_NUM; // Number of shades
+		var numOfShades = CANVAS_SHADES_NUM + 1; // Number of shades
+		// Add + 1 because we will find values in between 2 values later ( shade[i] < VALUE < shade[i+1])
 
 		//Crate 2d array of same dimensions as the canvas
 		var array = evolutionUtil.fill2DArray(new Array(), canvasObj.width, canvasObj.height);
@@ -198,7 +199,6 @@ $.fn.evoAnimate = function(props) {
 	* @param object 		canvasObj 		Canvas object
 	* @param integer 		x 				X coordinate
 	* @param integer 		y 				Y coordinate
-	* @param boolean 		render 			Indicates whether the shades should be rendered
 	* @param boolean 		transformed 	Indicates if coordinates have already bene transformed
 	*/
 	function incrementShadeOnPoint(canvasObj, x, y, render = true, transformed = true) {
@@ -210,15 +210,44 @@ $.fn.evoAnimate = function(props) {
 		x = Math.floor(x);
 		y = Math.floor(y);
 		// Inline undefined checks
-		return (undefined === canvasObj.shadeStartsCounter[x] ? -1 :  undefined === canvasObj.shadeStartsCounter[x][y] ? -1 : canvasObj.shadeStartsCounter[x][y]++) + 1;
+		var rtrn =  (undefined === canvasObj.shadeStartsCounter[x] ? -1 :  undefined === canvasObj.shadeStartsCounter[x][y] ? -1 : canvasObj.shadeStartsCounter[x][y]++) + 1;
+		if(render)
+			renderShadePoint(canvasObj, x, y);
+		return rtrn;
+
+	}
+
+	/*
+	* Gets proper shade (color) for given coordinate
+	* @param object 		canvasObj 		Canvas object
+	* @param integer 		x 				X coordinate
+	* @param integer 		y 				Y coordinate
+	*/
+	function getShade(canvasObj, x, y) {
+		var counterValue = canvasObj.shadeStartsCounter[x][y];
+		var shadeStarts = CANVAS_SHADES[canvasObj.id];
+		var prevShadeValue = shadeStarts[0];
+		for(var i = 1; i < shadeStarts.length; i++) {
+			var shadeValue = shadeStarts[i];
+			if(counterValue > prevShadeValue && counterValue  <= shadeValue) {
+				return CANVAS_SHADES_COLORS[i - 1];
+			}
+		}
+		// This should never happen
+		return CANVAS_BG_COLOR;
 	}
 
 	/*
 	* Renders shades on each pixel
 	* @param object 		canvasObj 		Canvas object
+	* @param integer 		x 				X coordinate
+	* @param integer 		y 				Y coordinate
 	*/
-	function renderShades(canvasObj) {
-		// TODO
+	function renderShadePoint(canvasObj, x, y) {
+		var ctx = canvasObj.bgLayerCtx;
+		var color = getShade(canvasObj, x, y);
+		ctx.fillStyle = color;
+		ctx.fillRect(x, y, 2, 2);
 	}
 
 	/*
@@ -458,7 +487,7 @@ $.fn.evoAnimate = function(props) {
 	* @param boolean 	drawLine 		Indicates if line is to be drawn from current point to parents
 	*/
 	function renderStep(x, y = 0, canvasObj, parentCoords,  drawLine = true) {
-		var ctx = canvasObj.ctx;
+		var ctx = canvasObj.renderLayerCtx;
 		ctx.fillStyle = POINT_CURRENT_COLOR;
 		var physicalCoords = coordinateTransform(canvasObj, x, y);
 		ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
@@ -490,7 +519,7 @@ $.fn.evoAnimate = function(props) {
 	function fadePoints(ctxObj, parents, childX, childY, childGenId) {
 		if(!checkGenIsShown(childGenId - 1))
 			return;
-		var ctx = ctxObj.ctx;
+		var ctx = ctxObj.renderLayerCtx;
 		// X and Y axis values are stored via the indexes, which start with 1 (X1 = 1)
 		var x = ctxObj.xIndex - 1;
 		var y = ctxObj.yIndex - 1;
@@ -504,12 +533,6 @@ $.fn.evoAnimate = function(props) {
 			ctx.fillStyle = POINT_PREVIOUS_GEN_COLOR;
 			physicalCoords = coordinateTransform(ctxObj, parent.x[x], parent.x[y]);
 			ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
-			// Line to parents gets LINE_OLDER_COLOR
-			/*ctx.strokeStyle = LINE_OLDER_COLOR;
-			ctx.beginPath();
-			ctx.moveTo(childX, childY);
-			ctx.lineTo(physicalCoords.x,physicalCoords.y);
-			ctx.stroke();*/
 
 			// First check if we can show parents
 			if(checkGenIsShown(childGenId - 2)) {
@@ -618,15 +641,20 @@ $.fn.evoAnimate = function(props) {
 		c.yIndex = parseInt(axisIds[1]);
 
 		// Create a canvas element (background)
-		c.canvas = $('<canvas/>').height(c.height).width(c.width).attr('height', c.height).attr('width', c.width).attr('id', id);
-		container.append(c.canvas);
-		c.ctx = c.canvas[0].getContext('2d');
+		c.bgCanvas = $('<canvas/>').height(c.height).width(c.width).attr('height', c.height).attr('width', c.width).attr('id', id);
+		container.append(c.bgCanvas );
+		c.bgLayerCtx = c.bgCanvas [0].getContext('2d');
 
 		// Create canvasStack object
 		c.canvasStack = new CanvasStack(id);
 
-		// Create info layer
+		// Create render layer
 		var tmpID = c.canvasStack.createLayer();
+		c.renderCanvas = $('#' + tmpID);
+		c.renderLayerCtx = c.renderCanvas[0].getContext('2d');
+
+		// Create info layer
+		tmpID = c.canvasStack.createLayer();
 		c.infoCanvas = $('#' + tmpID);
 		c.infoLayerCtx = c.infoCanvas[0].getContext('2d');
 
@@ -673,8 +701,9 @@ $.fn.evoAnimate = function(props) {
 		// Clear canvases
 		for(var i in CANVAS_ARR) {
 			var c = CANVAS_ARR[i];
-			c.ctx.fillStyle = CANVAS_BG_COLOR;
-			c.ctx.fillRect(0, 0, c.width, c.height);
+			//c.bgLayerCtx.fillStyle = CANVAS_BG_COLOR;
+			//c.bgLayerCtx.fillRect(0, 0, c.width, c.height);
+			c.renderLayerCtx.clearRect(0, 0, c.width, c.height);
 			// Clear shades counter
 			c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width, c.height);
 		}
@@ -935,7 +964,7 @@ $.fn.evoAnimate = function(props) {
 	function findCanvasInArr(canvas) {
 		for(var i in CANVAS_ARR) {
 			var item = CANVAS_ARR[i];
-			if(canvas === item.canvas[0]) {
+			if(canvas === item.bgCanvas[0]) {
 				return item;
 			}
 		}
