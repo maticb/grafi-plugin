@@ -20,19 +20,26 @@ Več grafov;
 * - ** RAFPolyfill.js (request animation frame polyfill, if using older browsers) https://gist.github.com/paulirish/1579671
 *
 * Init properties (OBJECT) containing:
-* - source 		string	REQUIRED	URL of the source file, or raw source data, depending on the settings (read below)
+* - source 			string	REQUIRED	URL of the source file, or raw source data, depending on the settings (read below)
 * 			URL SOURCE NOT YET IMPLEMENETED!
-* - sourceType	string 	Optional	Set type of source, defaults to "URL". Possible types: "URL", "STRING"
-* - playOnLoad	bool	Optional	Defines if playback should start when plugin is done loading, defaults to true.
-* - display		array	Optional	Defines how many (2 per canvas) and which X values to show
+*
+* - sourceType		string 	Optional	Set type of source, defaults to "URL". Possible types: "URL", "STRING"
+*
+* - playOnLoad		bool	Optional	Defines if playback should start when plugin is done loading, defaults to true.
+*
+* - display			array	Optional	Defines how many (2 per canvas) and which X values to show
 * 		Shows all combinations of X-es by default e.g.: If the problem has 3 dimensions -> [x1,x2], [x1,x3], [x2,x3]
 *		Can also display fitness: [fit, x1]
 * 		Defined as an array, where the first X is numbered as "1": [1,2]  would display a canvas elements containing a graph, showing [x1,x2]
 *		To show multiple combinations define an array of arrays: [[1,2],[2,3]] -> [x1,x2] and [x2,x3]
-* - canvasSize array 	Optional	Defines dimensions of each canvas seperately, or  globally.
+*
+* - canvasSize 		array 	Optional	Defines dimensions of each canvas seperately, or  globally.
 * 		If only an array of 2 integers is set, that will be considered as the dimension for all canvases: [300,300]
 * 		You can also pass an array of arrays (Identical in size to the above "display" array!) that will set dimensions for each canvas seperately
-* - fps 		integer Optional 	Frames per second, defaults to  25
+*
+* - fps 			integer Optional 	Frames per second, defaults to  25
+*
+* - shadingHistory 	boolean Optional 	Display or hide step history with shading, defaults to true
 *
 *	Example configuration of plugin properties:
 
@@ -113,8 +120,9 @@ $.fn.evoAnimate = function(props) {
 	var MENU_SHOWN = false;
 	var MENU_BUTTON_SHOWN = false;
 
-	// Shades for history of each canvas
+	// Shading history for each canvas
 	// We count the number of steps that have hit the same pixel, and add darker shades to pixels that have had more steps on them, to display algorithm search area
+	var USE_SHADING_HISTORY = true;
 	var CANVAS_SHADES_NUM = 10;
 	var CANVAS_SHADES_COLORS = ['#E5E5E5', '#CBCBCB', '#B1B1B1', '#979797', '#7D7D7D', '#636363', '	#494949', '#2F2F2F', '#151515', '#000000']; // Array of CANVAS_SHADES_NUM colors
 	var CANVAS_SHADES = {}; // Array that stores numbers, at which a certain shade should start
@@ -202,6 +210,8 @@ $.fn.evoAnimate = function(props) {
 	* @param boolean 		transformed 	Indicates if coordinates have already bene transformed
 	*/
 	function incrementShadeOnPoint(canvasObj, x, y, render = true, transformed = true) {
+		if(!isShadingHistory())
+			return;
 		if(!transformed) {
 			var coords = coordinateTransform(canvasObj, x, y);
 			x = coords.x;
@@ -448,6 +458,14 @@ $.fn.evoAnimate = function(props) {
 	function isSetup() {
 		return true === IS_SETUP ? true : false;
 	}
+
+	/*
+	* Checks if we are using shading history
+	*/
+	function isShadingHistory() {
+		return true ===  USE_SHADING_HISTORY ? true :  false;
+	}
+
 	/*
 	* Check if given generation can be rendered
 	* @param integer genNum 	Generation number
@@ -713,21 +731,23 @@ $.fn.evoAnimate = function(props) {
 				stepGen(ANIMATION_DATA, currentGenID);
 			}
 		} else {
-			// Shading for points of generations not shown (all those in front of the first generation in RENDERED_GENERATIONS)
-			var firstShownStep = GENERATION_STARTS[RENDERED_GENERATIONS[0] - 1];
-			for(var i = 0; i < firstShownStep; i++) {
-				var stepData = ANIMATION_DATA.steps[i];
-				for(var j in CANVAS_ARR) {
-					var canvasObj = CANVAS_ARR[j];
-					// X and Y axis values are stored via the i ndexes, which start with 1 (X1 = 1)
-					var x = canvasObj.xIndex - 1;
-					var y = canvasObj.yIndex - 1;
-					// Get actual values from current step data
-					var x1 = stepData.x[x];
-					var x2 = stepData.x[y];
+			if(isShadingHistory()) {
+				// Shading for points of generations not shown (all those in front of the first generation in RENDERED_GENERATIONS)
+				var firstShownStep = GENERATION_STARTS[RENDERED_GENERATIONS[0] - 1];
+				for(var i = 0; i < firstShownStep; i++) {
+					var stepData = ANIMATION_DATA.steps[i];
+					for(var j in CANVAS_ARR) {
+						var canvasObj = CANVAS_ARR[j];
+						// X and Y axis values are stored via the i ndexes, which start with 1 (X1 = 1)
+						var x = canvasObj.xIndex - 1;
+						var y = canvasObj.yIndex - 1;
+						// Get actual values from current step data
+						var x1 = stepData.x[x];
+						var x2 = stepData.x[y];
 
-					// Increment shaders
-					incrementShadeOnPoint(canvasObj, x1, x2, true, false);
+						// Increment shaders
+						incrementShadeOnPoint(canvasObj, x1, x2, true, false);
+					}
 				}
 			}
 
@@ -1152,6 +1172,8 @@ $.fn.evoAnimate = function(props) {
 		}
 		// FPS
 		fps = props.hasOwnProperty('fps') ? parseInt(props.fps) : fps;
+		// Shade
+		USE_SHADING_HISTORY = props.hasOwnProperty('shadingHistory') ? props.shadingHistory : true;
 		//PlayOnLoad
 		var playOnLoad = props.hasOwnProperty('playOnLoad') ? props.playOnLoad : true;
 		if(playOnLoad) {
