@@ -93,7 +93,7 @@ $.fn.evoAnimate = function(props) {
 
 
 	// Playback FPS limiting variables
-	var fps = 1;
+	var fps = 25;
 	var fpsInterval;
 	var now;
 	var then;
@@ -146,8 +146,7 @@ $.fn.evoAnimate = function(props) {
 			}
 		}
 		data.problemRange = (max - min);
-		data.problemPadding = data.problemRange * 0.1;
-		data.problemRange *= 1.2; // Add some padding on the edges
+		data.problemLowestNum = min;
 	}
 	/*
 	* Calculates number of steps that have hit each pixel, to calculate proper shading values (for each canvas seperately)
@@ -161,7 +160,7 @@ $.fn.evoAnimate = function(props) {
 		// Add + 1 because we will find values in between 2 values later ( shade[i] < VALUE < shade[i+1])
 
 		//Crate 2d array of same dimensions as the canvas
-		var array = evolutionUtil.fill2DArray(new Array(), canvasObj.width, canvasObj.height);
+		var array = evolutionUtil.fill2DArray(new Array(), canvasObj.width + 1, canvasObj.height + 1);
 
 		// Count amount of steps on the same pixel
 		for(var i in data.steps) {
@@ -357,6 +356,7 @@ $.fn.evoAnimate = function(props) {
 		return obj;
 	}
 
+	var FIRST_GEN_IS_ZERO = false;
 	/*
 	* Parses argument via it's number inside line
 	* @param string/array 	arg 	argument value
@@ -369,6 +369,12 @@ $.fn.evoAnimate = function(props) {
 				break;
 			}
 			case 1: { // generation
+				arg = parseInt(arg);
+				// Because code was first designed so that the first generation is always 1, add a safeguard here
+				if(0 === arg && !FIRST_GEN_IS_ZERO)
+					FIRST_GEN_IS_ZERO = true;
+				if(FIRST_GEN_IS_ZERO)
+					arg++;
 				obj.generation = parseInt(arg);
 				break;
 			}
@@ -509,7 +515,6 @@ $.fn.evoAnimate = function(props) {
 		ctx.fillStyle = POINT_CURRENT_COLOR;
 		var physicalCoords = coordinateTransform(canvasObj, x, y);
 		ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
-
 		// Add line from the previously drawn point
 		if(true === drawLine) {
 			ctx.strokeStyle = LINE_CURRENT_COLOR;
@@ -682,7 +687,8 @@ $.fn.evoAnimate = function(props) {
 		c.menuLayerCtx = c.menuCanvas[0].getContext('2d');
 
 		// Fill shade starts counter array with zeroes
-		c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width, c.height);
+		c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width + 1, c.height + 1);
+
 		// Push into array
 		CANVAS_ARR.push(c);
 		return c;
@@ -722,7 +728,7 @@ $.fn.evoAnimate = function(props) {
 			c.bgLayerCtx.clearRect(0, 0, c.width, c.height);
 			c.renderLayerCtx.clearRect(0, 0, c.width, c.height);
 			// Clear shades counter
-			c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width, c.height);
+			c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width + 1, c.height + 1);
 		}
 		if(lastGenId < 0) {
 			// Draw all shown generations every frame, remove and add according to the settings
@@ -926,8 +932,16 @@ $.fn.evoAnimate = function(props) {
 	* @param integer 	y 		Value of Y
 	*/
 	function coordinateTransform(ctx, x, y) {
-		var newX =  ctx.width / (ANIMATION_DATA.problemRange / x) + ANIMATION_DATA.problemPadding;
-		var newY =  ctx.height / (ANIMATION_DATA.problemRange / y) + ANIMATION_DATA.problemPadding;
+		var tmpX = (x > 0 ? (ANIMATION_DATA.problemRange / x) : 0);
+		var tmpY = (y > 0 ? (ANIMATION_DATA.problemRange / y) : 0);
+		// Physical coordinates cannot be negative, if problem range goes below 0 add the difference to produce only positive numbers
+		if(ANIMATION_DATA.problemLowestNum < 0) {
+			var diff = 0 - ANIMATION_DATA.problemLowestNum;
+			tmpX = ANIMATION_DATA.problemRange / (x + diff);
+			tmpY = ANIMATION_DATA.problemRange / (y + diff);
+		}
+		var newX = 0 === tmpX ? 0 : ctx.width / tmpX;
+		var newY = 0 === tmpY ? 0 : ctx.height / tmpY;
 		return {x: newX, y: newY};
 	}
 
@@ -1044,6 +1058,7 @@ $.fn.evoAnimate = function(props) {
 					else
 						play();
 				}
+
 				// Top right corner is generation step forward
 				if(oX > cw/2 && oY < ch/2) {
 					moveOneGenerationForward();
@@ -1168,7 +1183,7 @@ $.fn.evoAnimate = function(props) {
 		if('url' === sourceType) {
 			//TODO: imeplement reading source from URL
 		} else if('string' === sourceType) {
-			ANIMATION_DATA = parseInput(exampleInput);
+			ANIMATION_DATA = parseInput(props.source);
 		}
 		// FPS
 		fps = props.hasOwnProperty('fps') ? parseInt(props.fps) : fps;
