@@ -985,6 +985,9 @@ $.fn.evoAnimate = function(props) {
 	* @param object 	canvasObj 	Canvas object clicked on
 	*/
 	function findPointsOnClick(offsetX, offsetY, canvasObj) {
+		// Generate click area size from canvas width
+		var areaX = canvasObj.width * 0.015;
+		var areaY = canvasObj.height * 0.015;
 		// We can have multiple points near the same area, so use an array
 		var matchedSteps = [];
 		for(var i in ANIMATION_DATA.steps) {
@@ -1001,7 +1004,7 @@ $.fn.evoAnimate = function(props) {
 			x = coords.x;
 			y = coords.y;
 			// Check if point's physical coordinates match the click
-			if(offsetX - 5  < x && x < offsetX + 5 && offsetY - 5  < y && y < offsetY + 5) {
+			if(offsetX - areaX < x && x < offsetX + areaX && offsetY - areaY  < y && y < offsetY + areaY) {
 				matchedSteps.push(evolutionUtil.clone(step));
 			}
 		}

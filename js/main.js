@@ -33,7 +33,8 @@ $(document).ready(function(){
 		source: exampleInput1,
 		sourceType: 'STRING',
 		display: [[1,2],[5,6]],
-		canvasSize: [1000,1000]
+		canvasSize: [1000,1000],
+		fps:60,
 	});
 });
 
