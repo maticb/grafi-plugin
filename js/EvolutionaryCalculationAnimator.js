@@ -161,7 +161,6 @@ $.fn.evoAnimate = function(props) {
 
 		//Crate 2d array of same dimensions as the canvas
 		var array = evolutionUtil.fill2DArray(new Array(), canvasObj.width + 1, canvasObj.height + 1);
-
 		// Count amount of steps on the same pixel
 		for(var i in data.steps) {
 			var step = data.steps[i];
@@ -289,7 +288,10 @@ $.fn.evoAnimate = function(props) {
 			if('' === item) {
 				return false;
 			}
-			parseLine(rtrn, item);
+			// Special case of newline in the produced text?
+			// Trim empty strings/newlines and check if it is still empty, in that case "continue"
+			if('' !== item.trim())
+				parseLine(rtrn, item);
 		});
 		// Find starting points of generations
 		findGenerationStarts(rtrn);
@@ -988,6 +990,8 @@ $.fn.evoAnimate = function(props) {
 		// Generate click area size from canvas width
 		var areaX = canvasObj.width * 0.015;
 		var areaY = canvasObj.height * 0.015;
+		areaX = areaX < 5 ? 5 : areaX;
+		areaY = areaY < 5 ? 5 : areaY;
 		// We can have multiple points near the same area, so use an array
 		var matchedSteps = [];
 		for(var i in ANIMATION_DATA.steps) {
@@ -1115,7 +1119,7 @@ $.fn.evoAnimate = function(props) {
 	function initialize() {
 		container.append('<div/>');
 		container = container.find('div:first-child')
-		container.addClass('evoAnimateContainer');
+		container.addClass('evo-animate-container');
 		// Source
 		if(!props.hasOwnProperty('source')) {
 			// TODO: friendlier error messages
@@ -1184,7 +1188,14 @@ $.fn.evoAnimate = function(props) {
 		//SourceType
 		var sourceType = props.hasOwnProperty('sourceType') ? props.sourceType.toLowerCase() : 'url';
 		if('url' === sourceType) {
-			//TODO: imeplement reading source from URL
+			// Load text file
+			$.ajax({
+				url:props.source,
+				success: function (data){
+					ANIMATION_DATA = parseInput(data);
+					loadingCompleted();
+				}
+			});
 		} else if('string' === sourceType) {
 			ANIMATION_DATA = parseInput(props.source);
 		}
@@ -1194,11 +1205,19 @@ $.fn.evoAnimate = function(props) {
 		USE_SHADING_HISTORY = props.hasOwnProperty('shadingHistory') ? props.shadingHistory : true;
 		//PlayOnLoad
 		var playOnLoad = props.hasOwnProperty('playOnLoad') ? props.playOnLoad : true;
-		if(playOnLoad) {
-			play();
-		} else {
-			playSetup();
-		}
+		// Function when loading is completed, as data can be loaded from ajax.
+		var loadingCompleted = function() {
+			if(playOnLoad) {
+				play();
+			} else {
+				playSetup();
+			}
+
+			// Event binds
+			bindEvents();
+		};
+		if('string' === sourceType)
+			loadingCompleted();
 		//TEMPORARY GLOBALS to  allow console use!
 		stepGenF = moveOneGenerationForward;
 		stepGenB = moveOneGenerationBackward;
@@ -1206,8 +1225,6 @@ $.fn.evoAnimate = function(props) {
 		stepB = moveOneStepBackward;
 		playBind = play;
 		stopBind = stop;
-		// Event binds
-		bindEvents();
 		return true;
 	}
 	// 	Initialize the plugin

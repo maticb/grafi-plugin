@@ -30,8 +30,9 @@ var exampleInput  = ''+
 $(document).ready(function(){
 	evo = $('#main').evoAnimate({
 		playOnLoad: false,
-		source: exampleInput1,
-		sourceType: 'STRING',
+		//source: exampleInput1,
+		source:'http://localhost/diploma/sphere.php',
+		sourceType: 'URL',
 		display: [[1,2],[5,6]],
 		canvasSize: [1000,1000],
 		fps:60,

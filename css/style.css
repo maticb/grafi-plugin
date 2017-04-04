@@ -6,11 +6,13 @@ body,html {
 }
 
 /* Plugin css code */
-.evoAnimateContainer {
+.evo-animate-container {
 	position:relative;
 }
-.evoAnimateContainer > canvas {
+.evo-animate-container > canvas {
 	margin:5px;
 	box-sizing: border-box;
 	border:1px solid black;
 }
+
+
