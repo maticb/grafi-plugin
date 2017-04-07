@@ -93,7 +93,7 @@ $.fn.evoAnimate = function(props) {
 
 
 	// Playback FPS limiting variables
-	var fps = 25;
+	var fps = 600;
 	var fpsInterval;
 	var now;
 	var then;
@@ -530,7 +530,8 @@ $.fn.evoAnimate = function(props) {
 			}
 		}
 		// Increment shades
-		incrementShadeOnPoint(canvasObj, physicalCoords.x, physicalCoords.y);
+		if(isShadingHistory())
+			incrementShadeOnPoint(canvasObj, physicalCoords.x, physicalCoords.y);
 	}
 
 	/*
@@ -732,12 +733,14 @@ $.fn.evoAnimate = function(props) {
 			// Clear shades counter
 			c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width + 1, c.height + 1);
 		}
+
 		if(lastGenId < 0) {
 			// Draw all shown generations every frame, remove and add according to the settings
 			for(var i in RENDERED_GENERATIONS) {
 				var currentGenID = RENDERED_GENERATIONS[i];
 				stepGen(ANIMATION_DATA, currentGenID);
 			}
+
 		} else {
 			if(isShadingHistory()) {
 				// Shading for points of generations not shown (all those in front of the first generation in RENDERED_GENERATIONS)
@@ -856,9 +859,9 @@ $.fn.evoAnimate = function(props) {
 		if(!isSetup())
 			playSetup();
 		if(PLAY_STEP < ANIMATION_DATA.steps.length) {
-			var stepData = ANIMATION_DATA.steps[PLAY_STEP++];
+			var stepData = ANIMATION_DATA.steps[PLAY_STEP];
 			checkRenderedGenerations(stepData);
-			renderGenerations(stepData.generation, PLAY_STEP);
+			renderGenerations(stepData.generation, PLAY_STEP + 1);
 		}
 	};
 	/*
@@ -887,7 +890,7 @@ $.fn.evoAnimate = function(props) {
 			if(RENDERED_GENERATIONS.length > SHOWN_GENERATIONS_NUMBER && 0 !== SHOWN_GENERATIONS_NUMBER) {
 				RENDERED_GENERATIONS.splice(RENDERED_GENERATIONS.length - 1,1);
 			}
-			renderGenerations(stepData.generation, PLAY_STEP);
+			renderGenerations(stepData.generation, PLAY_STEP, true);
 		}
 	};
 
@@ -1029,6 +1032,34 @@ $.fn.evoAnimate = function(props) {
 		return undefined;
 	}
 
+
+	/*
+	* Displays text with point details on a canvas
+	* @param string 	msg 			Info text
+	* @param object 	canvasObj 		Canvas object
+	*/
+	function displayPointInfo(msg, canvasObj) {
+		clearPointInfo(canvasObj);
+		var ctx = canvasObj.infoLayerCtx;
+		var x = 35;
+		var y = 10;
+		var lineheight = 15;
+		var lines = msg.split('\n');
+		for (var i = 0; i < lines.length; i++)
+			ctx.fillText(lines[i], x, y + (i * lineheight));
+	}
+
+ 	/*
+ 	* Clears info text
+	* @param object 	canvasObj 		Canvas object
+	*/
+	function clearPointInfo(canvasObj) {
+		var ctx = canvasObj.infoLayerCtx;
+		ctx.clearRect(0, 0, canvasObj.width, canvasObj.height);
+	}
+
+
+
 	/*
 	* Bind events
 	*/
@@ -1046,14 +1077,12 @@ $.fn.evoAnimate = function(props) {
 				var oX = e.offsetX;
 				var oY = e.offsetY;
 
-				var clickedPoints = findPointsOnClick(oX, oY, canvas);
-				var msg = 'Podatki o točki/točkah: \n ';
-				for(var i in clickedPoints) {
-					var p = clickedPoints[i];
-					msg += 'Id: ' + p.id + ', Fitness: ' + p.fitness + ', Generation: ' + p.generation + ' \n ' ;
+				// Menu button
+				if( oX < 30 && oY < 30) {
+					menuButtonClicked();
+					// Do not trigger controls if menu was clicked
+					return;
 				}
-				if(clickedPoints.length)
-					alert(msg); // TODO: update display to some sort of usable format
 
 				// Implementation of controls
 				var cw = canvas.width;
@@ -1078,10 +1107,6 @@ $.fn.evoAnimate = function(props) {
 				if(oX > cw/2 && oY > ch/2) {
 					moveOneStepForward();
 				}
-				// Menu button
-				if( oX < 30 && oY < 30) {
-					menuButtonClicked();
-				}
 			})
 			.off('contextmenu')
 			.on('contextmenu', function(e) {
@@ -1094,6 +1119,7 @@ $.fn.evoAnimate = function(props) {
 			.on('mousemove', function(e){
 				e.preventDefault();
 				var canvasCtx = this.getContext('2d');
+
 				var oX = e.offsetX;
 				var oY = e.offsetY;
 				// Menu icon will be in the top left corner, for ease of calculation
@@ -1101,6 +1127,20 @@ $.fn.evoAnimate = function(props) {
 					menuButtonShow(canvasCtx, true);
 				} else {
 					menuButtonShow(canvasCtx, false);
+				}
+
+				// Display info about points
+				var canvasObj = findCanvasInArr($(e.currentTarget).closest('div').prev()[0]);
+				var clickedPoints = findPointsOnClick(oX, oY, canvasObj);
+				var msg = 'Podatki o točki/točkah: \n';
+				for(var i in clickedPoints) {
+					var p = clickedPoints[i];
+					msg += 'Id: ' + p.id + ', Fitness: ' + p.fitness.toFixed(3) + ', Generation: ' + p.generation + '\n' ;
+				}
+				if(clickedPoints.length) {
+					displayPointInfo(msg, canvasObj);
+				} else {
+					clearPointInfo(canvasObj);
 				}
 			});
 
