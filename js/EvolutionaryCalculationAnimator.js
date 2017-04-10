@@ -314,6 +314,7 @@ $.fn.evoAnimate = function(props) {
 			}
 			CANVAS_X_SETTING = combinationArr;
 		}
+		rtrn.lastGeneration = rtrn.steps[rtrn.steps.length - 1 ].generation;
 		return rtrn;
 	}
 
@@ -724,7 +725,7 @@ $.fn.evoAnimate = function(props) {
 	* @param integer 	lastGenId			Id of last gen to render
 	* @param integer	lastGenStepId 		Id of the step to render up to in last generation
 	*/
-	function renderGenerations(lastGenId = -1, lastGenStepId = -1) {
+	var renderGenerations = function(lastGenId = -1, lastGenStepId = -1) {
 		// Clear canvases
 		for(var i in CANVAS_ARR) {
 			var c = CANVAS_ARR[i];
@@ -761,7 +762,6 @@ $.fn.evoAnimate = function(props) {
 					}
 				}
 			}
-
 			// First render all generations except the last one
 			for(var i in RENDERED_GENERATIONS) {
 				var currentGenID = RENDERED_GENERATIONS[i];
@@ -770,6 +770,14 @@ $.fn.evoAnimate = function(props) {
 			}
 			// Then render all steps in the last given generation up to the given step id
 			var startStep = GENERATION_STARTS[lastGenId - 1];
+			// If last generation step id is 0, that means all steps within that generation
+			if(0 === lastGenStepId) {
+				if(lastGenId < GENERATION_STARTS.length)
+					lastGenStepId = GENERATION_STARTS[lastGenId];
+				else
+					lastGenStepId = ANIMATION_DATA.steps.length;
+
+			}
 			for(;startStep < lastGenStepId; startStep++) {
 				step(ANIMATION_DATA.steps[startStep]);
 			}
@@ -834,10 +842,11 @@ $.fn.evoAnimate = function(props) {
 
 	/*
 	* Check if we moved into a step that is a different generation, and should update rendered generations
+	* @param object 	generationNum 	Generation number were checking this on
 	*/
-	function checkRenderedGenerations(stepData) {
+	function checkRenderedGenerations(generationNum) {
 		// If we are still in the same generation
-		if(LAST_ADDED_GENERATION  === stepData.generation)
+		if(LAST_ADDED_GENERATION  === generationNum)
 			return;
 		if(LAST_ADDED_GENERATION <= LAST_GENERATION) {
 			// Else increment to next generation
@@ -860,7 +869,7 @@ $.fn.evoAnimate = function(props) {
 			playSetup();
 		if(PLAY_STEP < ANIMATION_DATA.steps.length) {
 			var stepData = ANIMATION_DATA.steps[PLAY_STEP];
-			checkRenderedGenerations(stepData);
+			checkRenderedGenerations(stepData.generation);
 			renderGenerations(stepData.generation, PLAY_STEP + 1);
 		}
 	};
@@ -929,6 +938,31 @@ $.fn.evoAnimate = function(props) {
 			moveOneStepBackward();
 		}
 	}
+
+	/*
+	* Move N generations forward
+	* @param integer 	num 	Number of generations to move forward
+	*/
+	var moveNGenerationsForward = function(num) {
+		for(var i = 0; i < num; i++) {
+			moveOneGenerationForward();
+		}
+	}
+
+	/*
+	* Move to N generation
+	* @param integer 	num 	Number of generation to move to
+	*/
+	var moveToGenerationN = function(num) {
+		if(num >= 0 && num <= ANIMATION_DATA.lastGeneration) {
+			// Make sure rendered generations stores teh correct numbers
+			for(var i = 1; i < num; i++)
+				checkRenderedGenerations(i);
+			renderGenerations(num, 0);
+		}
+	}
+
+
 
 	/*
 	* Transforms (scales) coordinates from problem dimensions to the physical dimensions on the canvas
@@ -1265,6 +1299,8 @@ $.fn.evoAnimate = function(props) {
 		stepB = moveOneStepBackward;
 		playBind = play;
 		stopBind = stop;
+		move_generation_n = moveToGenerationN;
+		console.log(ANIMATION_DATA); // TEMP
 		return true;
 	}
 	// 	Initialize the plugin
@@ -1275,5 +1311,7 @@ $.fn.evoAnimate = function(props) {
 	this.stepBack = moveOneStepBackward;
 	this.stepGenerationForward = moveOneGenerationForward;
 	this.stepGenerationBackward = moveOneGenerationBackward;
+	this.stepNGenerationsForward = moveNGenerationsForward;
+	this.stepToGenerationN = moveToGenerationN;
 	return initialize() ? this : false;
 };
