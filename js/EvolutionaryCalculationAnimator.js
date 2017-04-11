@@ -1005,15 +1005,31 @@ $.fn.evoAnimate = function(props) {
 
 	/*
 	* Function that displays menu when clicking on the show menu button
-	* @param object 	ctx 	Canvas context to draw on
+	* @param object 	canvasObj 	Canvas object to draw menu on
 	*/
-	function menuButtonClicked(ctx) {
+	function menuButtonClicked(canvasObj) {
 		if(false === MENU_SHOWN) {
-			//TODO: show menu
 			MENU_SHOWN = true;
+			showHideMenu(MENU_SHOWN, canvasObj);
 		} else {
-			//TODO: hide menu
 			MENU_SHOWN = false;
+			showHideMenu(MENU_SHOWN, canvasObj);
+		}
+	}
+
+	/*
+	*
+	* Function that shows/hides menu menu
+	* @param boolean 	show 	Show menu if true, else hide
+	* @param object 	canvasObj 	Canvas object to draw menu on
+	*/
+	function showHideMenu(show = true, canvasObj) {
+		var ctx = canvasObj.menuLayerCtx;
+		console.log(show);
+		if(show) {
+			// TODO draw menu
+		} else {
+			// TODO hide menu
 		}
 	}
 
@@ -1113,7 +1129,7 @@ $.fn.evoAnimate = function(props) {
 
 				// Menu button
 				if( oX < 30 && oY < 30) {
-					menuButtonClicked();
+					menuButtonClicked(canvas);
 					// Do not trigger controls if menu was clicked
 					return;
 				}
