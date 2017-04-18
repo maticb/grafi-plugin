@@ -940,16 +940,6 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
-	* Move N generations forward
-	* @param integer 	num 	Number of generations to move forward
-	*/
-	var moveNGenerationsForward = function(num) {
-		for(var i = 0; i < num; i++) {
-			moveOneGenerationForward();
-		}
-	}
-
-	/*
 	* Move to N generation
 	* @param integer 	num 	Number of generation to move to
 	*/
@@ -1045,9 +1035,14 @@ $.fn.evoAnimate = function(props) {
 		var areaY = canvasObj.height * 0.015;
 		areaX = areaX < 5 ? 5 : areaX;
 		areaY = areaY < 5 ? 5 : areaY;
+
+		var firstGen = 0 === SHOWN_GENERATIONS_NUMBER ? 1 : RENDERED_GENERATIONS[0];
+		var startStep = GENERATION_STARTS[firstGen - 1];
+		var lastStep = 0 === SHOWN_GENERATIONS_NUMBER ? ANIMATION_DATA.steps.length :  GENERATION_STARTS[RENDERED_GENERATIONS[RENDERED_GENERATIONS.length - 1]];
+
 		// We can have multiple points near the same area, so use an array
 		var matchedSteps = [];
-		for(var i in ANIMATION_DATA.steps) {
+		for(var i = startStep; i < lastStep; i++) {
 			var step = ANIMATION_DATA.steps[i];
 			// Check if step hasn't been rendered yet
 			if(step.id > PLAY_STEP + 1)
@@ -1327,7 +1322,6 @@ $.fn.evoAnimate = function(props) {
 	this.stepBack = moveOneStepBackward;
 	this.stepGenerationForward = moveOneGenerationForward;
 	this.stepGenerationBackward = moveOneGenerationBackward;
-	this.stepNGenerationsForward = moveNGenerationsForward;
 	this.stepToGenerationN = moveToGenerationN;
 	return initialize() ? this : false;
 };
