@@ -314,7 +314,7 @@ $.fn.evoAnimate = function(props) {
 			}
 			CANVAS_X_SETTING = combinationArr;
 		}
-		rtrn.lastGeneration = rtrn.steps[rtrn.steps.length - 1 ].generation;
+		rtrn.lastGeneration = evolutionUtil.lastItem(rtrn.steps).generation;
 		return rtrn;
 	}
 
@@ -627,10 +627,10 @@ $.fn.evoAnimate = function(props) {
 			}
 
 			// Draw line if it can be shown (only draw lines for the very last generation)
-			drawLine = RENDERED_GENERATIONS[RENDERED_GENERATIONS.length - 1] === stepData.generation ? true : false;
+			drawLine = evolutionUtil.lastItem(RENDERED_GENERATIONS) === stepData.generation ? true : false;
 			renderStep(x1, x2, canvasObj, parentCoords, drawLine);
 
-			// "Fade" previous generation
+			// "Fade" parents
 			if(hasAtLeastOneParent) {
 				fadePoints(canvasObj, parents, x1, x2, stepData.generation);
 			}
@@ -720,6 +720,19 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
+	* Clear RENDERED_GENERATIONS array and fill it according to SHOWN_GENERATIONS_NUMBER towards a given generation
+	* @param integer 	num Generation number
+	*/
+	function setRenderedGenerations(num) {
+		RENDERED_GENERATIONS = [];
+		for(var i = num; i >= num - SHOWN_GENERATIONS_NUMBER + 1; i--) {
+			if(i > 0)
+				RENDERED_GENERATIONS.unshift(i);
+		}
+		LAST_ADDED_GENERATION = evolutionUtil.lastItem(RENDERED_GENERATIONS);
+	}
+
+	/*
 	* Main render loop, using generations
 	* If  lastGenId is above 0, lastGenStepId must be set. This will render all shown generations up to the lastGenId one, and only all steps up to lastGenStepId will be rendered in that one
 	* @param integer 	lastGenId			Id of last gen to render
@@ -734,12 +747,17 @@ $.fn.evoAnimate = function(props) {
 			// Clear shades counter
 			c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width + 1, c.height + 1);
 		}
-
 		if(lastGenId < 0) {
 			// Draw all shown generations every frame, remove and add according to the settings
-			for(var i in RENDERED_GENERATIONS) {
-				var currentGenID = RENDERED_GENERATIONS[i];
-				stepGen(ANIMATION_DATA, currentGenID);
+			if(0 === SHOWN_GENERATIONS_NUMBER) {
+				for(var i = 1; i < ANIMATION_DATA.lastGeneration; i++) {
+					stepGen(i);
+				}
+			} else {
+				for(var i in RENDERED_GENERATIONS) {
+					var currentGenID = RENDERED_GENERATIONS[i];
+					stepGen(ANIMATION_DATA, currentGenID);
+				}
 			}
 
 		} else {
@@ -765,19 +783,22 @@ $.fn.evoAnimate = function(props) {
 			// First render all generations except the last one
 			for(var i in RENDERED_GENERATIONS) {
 				var currentGenID = RENDERED_GENERATIONS[i];
-				if(currentGenID < lastGenId)
+				if(currentGenID < lastGenId) {
 					stepGen(ANIMATION_DATA, currentGenID);
+				}
 			}
+
 			// Then render all steps in the last given generation up to the given step id
 			var startStep = GENERATION_STARTS[lastGenId - 1];
 			// If last generation step id is 0, that means all steps within that generation
-			if(0 === lastGenStepId) {
+			if(lastGenStepId <= 0) {
 				if(lastGenId < GENERATION_STARTS.length)
 					lastGenStepId = GENERATION_STARTS[lastGenId];
 				else
 					lastGenStepId = ANIMATION_DATA.steps.length;
 
 			}
+
 			for(;startStep < lastGenStepId; startStep++) {
 				step(ANIMATION_DATA.steps[startStep]);
 			}
@@ -880,11 +901,14 @@ $.fn.evoAnimate = function(props) {
 		if(!isSetup())
 			playSetup();
 		if(PLAY_STEP > 0) {
+			// If we played animation to the last step, we came to the steps.length + 1 (so that we stopped the loop)
+			if(ANIMATION_DATA.steps.length === PLAY_STEP)
+				PLAY_STEP--; // Subtract one more
 			PLAY_STEP--;
 			var stepData = ANIMATION_DATA.steps[PLAY_STEP];
 			var currentGenId = stepData.generation;
 			// Because we are going backwards, special case generation check here
-			if(RENDERED_GENERATIONS[0] + SHOWN_GENERATIONS_NUMBER > currentGenId && (RENDERED_GENERATIONS[0] - 1) > 0) {
+			if(RENDERED_GENERATIONS[0] + SHOWN_GENERATIONS_NUMBER - 1 > currentGenId && (RENDERED_GENERATIONS[0] - 1) > 0) {
 				RENDERED_GENERATIONS.unshift(RENDERED_GENERATIONS[0] - 1);
 			}
 			// Remove any generations higher than the one we are currently rendering
@@ -912,13 +936,12 @@ $.fn.evoAnimate = function(props) {
 		for(var i in GENERATION_STARTS) {
 			var current = GENERATION_STARTS[i];
 			if(current > PLAY_STEP) {
-				nextGenStartId = current;
+				i = parseInt(i);
 				break;
 			}
 		}
-		while(PLAY_STEP < nextGenStartId) {
-			moveOneStepForward();
-		}
+		setRenderedGenerations(i);
+		renderGenerations(i, 0);
 	}
 
 	/*
@@ -941,14 +964,20 @@ $.fn.evoAnimate = function(props) {
 
 	/*
 	* Move to N generation
+	* --------- NOTE: Generations start with 1!
 	* @param integer 	num 	Number of generation to move to
 	*/
 	var moveToGenerationN = function(num) {
 		if(num >= 0 && num <= ANIMATION_DATA.lastGeneration) {
-			// Make sure rendered generations stores teh correct numbers
-			for(var i = 1; i < num; i++)
-				checkRenderedGenerations(i);
-			renderGenerations(num, 0);
+			// Make sure rendered generations stores the correct numbers
+			if(0 === SHOWN_GENERATIONS_NUMBER) {
+				renderGenerations();
+			} else {
+				setRenderedGenerations(num);
+				renderGenerations(num);
+			}
+		} else {
+			console.warn('Error: Generation number out of bounds! Last generation: ' + ANIMATION_DATA.lastGeneration);
 		}
 	}
 
@@ -1038,7 +1067,7 @@ $.fn.evoAnimate = function(props) {
 
 		var firstGen = 0 === SHOWN_GENERATIONS_NUMBER ? 1 : RENDERED_GENERATIONS[0];
 		var startStep = GENERATION_STARTS[firstGen - 1];
-		var lastStep = 0 === SHOWN_GENERATIONS_NUMBER ? ANIMATION_DATA.steps.length :  GENERATION_STARTS[RENDERED_GENERATIONS[RENDERED_GENERATIONS.length - 1]];
+		var lastStep = 0 === SHOWN_GENERATIONS_NUMBER ? ANIMATION_DATA.steps.length :  GENERATION_STARTS[evolutionUtil.lastItem(RENDERED_GENERATIONS)];
 
 		// We can have multiple points near the same area, so use an array
 		var matchedSteps = [];
@@ -1152,12 +1181,12 @@ $.fn.evoAnimate = function(props) {
 				if(oX > cw/2 && oY > ch/2) {
 					moveOneStepForward();
 				}
-			})
-			.off('contextmenu')
+			});
+			/*.off('contextmenu')
 			.on('contextmenu', function(e) {
 				e.preventDefault();
 				// TODO: contextmenu click on points!
-			});
+			});*/
 			// Mousemove event for displaying menu button
 			$canvas
 			.off('mousemove')
@@ -1312,6 +1341,7 @@ $.fn.evoAnimate = function(props) {
 		stopBind = stop;
 		move_generation_n = moveToGenerationN;
 		console.log(ANIMATION_DATA); // TEMP
+		console.log(CANVAS_ARR); // TEMP
 		return true;
 	}
 	// 	Initialize the plugin

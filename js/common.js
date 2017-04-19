@@ -102,3 +102,13 @@ evolutionUtil.fill2DArray = function(arr, x, y, item = 0) {
 	}
 	return arr;
 };
+
+/*
+* Get last item of array
+* @param array 		arr 		Given array object
+*/
+evolutionUtil.lastItem = function(arr) {
+	if(arr.length > 0)
+		return arr[arr.length - 1];
+	return undefined;
+}
