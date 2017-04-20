@@ -30,12 +30,12 @@ var exampleInput  = ''+
 $(document).ready(function(){
 	evo = $('#main').evoAnimate({
 		playOnLoad: false,
-		source: exampleInput1,
-		sourceType: 'STRING',
-		//source:'http://localhost/diploma/sphere.php',
-		//sourceType: 'URL',
-		display: [[1,2],[5,6]],
-		canvasSize: [1000,1000],
+		//source: exampleInput1,
+		//sourceType: 'STRING',
+		source:'http://localhost/diploma/sphere.php',
+		sourceType: 'URL',
+		display: [[1,6],[4,5]],
+		canvasSize: [300,300],
 		fps:60,
 	});
 });

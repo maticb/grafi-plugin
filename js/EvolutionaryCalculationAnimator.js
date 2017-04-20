@@ -59,6 +59,7 @@ $.fn.evoAnimate = function(props) {
 	var self = this;
 	var container = self;
 	var ARGS_NUM = 7; // Number of arguments in the first line of the input (this should never change, unless the format of the input string will change)
+	var SMALLEST_CANVAS_DIM = [300,200]; // Smallest allowed values for canvas size (to prevent menu overlaps or inabillity to use it)
 	// Default values
 	var DEFAULT_CANVAS_SETTING = {
 		id: -1,
@@ -171,14 +172,18 @@ $.fn.evoAnimate = function(props) {
 		}
 		// Find the cell with the maximum amount of steps on it
 		var max = -1;
+		var min = 9999999;
 		for(var i in array){
 			var row = array[i];
 			for(var j in row) {
 				var cell = row[j];
 				if(cell > max)
 					max = cell;
+				if(cell < min && cell > 0)
+					min = cell;
 			}
 		}
+		max = max;
 		// Create array of zeroes with size: numOfShades
 		var shadeStarts = [];
 		for(var i = 0; i < numOfShades; i++)
@@ -187,14 +192,22 @@ $.fn.evoAnimate = function(props) {
 		if(max < numOfShades) {
 			var iterator = numOfShades - 1;
 			for(var i = max; i > 0 ; i--)
-				shadeStarts[iterator--] = i
+				shadeStarts[iterator--] = i;
 		} else {
+			var growth = false;
 			// Else calculate step (divison) and fill the array by adding it
-			var division = numOfShades / max;
-			var start = division;
-			var iterator = 0;
-			for(; start < max ; start += division)
-				shadeStarts[iterator++] = start;
+			var divisionOriginal =  max / numOfShades;
+			var division = divisionOriginal / numOfShades;
+			if(division > 10)
+				growth = true;
+			var start = min;
+			for(var i in shadeStarts) {
+				shadeStarts[i] = Math.round(start);
+				if(growth)
+					start += (division * (parseInt(i)));
+				else
+					start += divisionOriginal;
+			}
 		}
 		CANVAS_SHADES[canvasObj.id] = shadeStarts;
 	}
@@ -207,7 +220,7 @@ $.fn.evoAnimate = function(props) {
 	* @param integer 		y 				Y coordinate
 	* @param boolean 		transformed 	Indicates if coordinates have already bene transformed
 	*/
-	function incrementShadeOnPoint(canvasObj, x, y, render = true, transformed = true) {
+	function incrementShadeOnPoint(canvasObj, x, y, transformed = true) {
 		if(!isShadingHistory())
 			return;
 		if(!transformed) {
@@ -218,9 +231,7 @@ $.fn.evoAnimate = function(props) {
 		x = Math.floor(x);
 		y = Math.floor(y);
 		// Inline undefined checks
-		var rtrn =  (undefined === canvasObj.shadeStartsCounter[x] ? -1 :  undefined === canvasObj.shadeStartsCounter[x][y] ? -1 : canvasObj.shadeStartsCounter[x][y]++) + 1;
-		if(render)
-			renderShadePoint(canvasObj, x, y);
+		var rtrn =  (undefined === canvasObj.shadeStartsCounter[x] ? -1 :  (undefined === canvasObj.shadeStartsCounter[x][y] ? -1 : canvasObj.shadeStartsCounter[x][y]++) ) + 1;
 		return rtrn;
 
 	}
@@ -235,12 +246,13 @@ $.fn.evoAnimate = function(props) {
 		var counterValue = canvasObj.shadeStartsCounter[x][y];
 		var shadeStarts = CANVAS_SHADES[canvasObj.id];
 		var prevShadeValue = shadeStarts[0];
-		for(var i = 1; i < shadeStarts.length; i++) {
-			var shadeValue = shadeStarts[i];
-			if(counterValue > prevShadeValue && counterValue  <= shadeValue) {
-				return CANVAS_SHADES_COLORS[i - 1];
+		if(counterValue > shadeStarts[0])
+			for(var i = 1; i < shadeStarts.length; i++) {
+				var shadeValue = shadeStarts[i];
+				if(counterValue > prevShadeValue && counterValue  <= shadeValue) {
+					return CANVAS_SHADES_COLORS[i - 1];
+				}
 			}
-		}
 		// This should never happen
 		return CANVAS_BG_COLOR;
 	}
@@ -256,6 +268,29 @@ $.fn.evoAnimate = function(props) {
 		var color = getShade(canvasObj, x, y);
 		ctx.fillStyle = color;
 		ctx.fillRect(x, y, 2, 2);
+	}
+
+	/*
+	* Renders all shades of given canvasObj
+	* @param object 	canvasObj 		Canvas object
+	*/
+	function renderShades(canvasObj) {
+		var x = canvasObj.width;
+		var y = canvasObj.height;
+		for(var i = 0; i < x; i++) {
+			for(var j = 0; j < y; j++) {
+				if(canvasObj.shadeStartsCounter[i][j] > CANVAS_SHADES[canvasObj.id][0])
+					renderShadePoint(canvasObj, i, j);
+			}
+		}
+	}
+
+	/*
+	* Renders all shades on all canvas elements
+	*/
+	function renderAllCanvasesShades() {
+		for(var i in CANVAS_ARR)
+			renderShades(CANVAS_ARR[i]);
 	}
 
 	/*
@@ -748,6 +783,8 @@ $.fn.evoAnimate = function(props) {
 			c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width + 1, c.height + 1);
 		}
 		if(lastGenId < 0) {
+			// First render shades
+			renderAllCanvasesShades();
 			// Draw all shown generations every frame, remove and add according to the settings
 			if(0 === SHOWN_GENERATIONS_NUMBER) {
 				for(var i = 1; i < ANIMATION_DATA.lastGeneration; i++) {
@@ -776,10 +813,14 @@ $.fn.evoAnimate = function(props) {
 						var x2 = stepData.x[y];
 
 						// Increment shaders
-						incrementShadeOnPoint(canvasObj, x1, x2, true, false);
+						incrementShadeOnPoint(canvasObj, x1, x2, false);
 					}
 				}
 			}
+			// First render shades
+			renderAllCanvasesShades();
+
+
 			// First render all generations except the last one
 			for(var i in RENDERED_GENERATIONS) {
 				var currentGenID = RENDERED_GENERATIONS[i];
@@ -1004,6 +1045,67 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
+	* Calulates shown steps on the timeline
+	* @param integer 	cWidth 				Width of canvas that timeline is to be rendered on
+	* @param integer 	stepPixelWidth 		Width of step column in pixels
+	* @return returns object with starting and ending step number
+	*/
+	function calculateTimelineSteps(cWidth, stepPixelWidth = 5) {
+		var currentStep = PLAY_STEP;
+		var lastStep = ANIMATION_DATA.steps.length;
+		var startStep = 0;
+		var endStep = 0;
+
+		var shownStepsNum = cWidth / stepPixelWidth;
+
+		if(0 !== shownStepsNum % 2) { // If calulated number is odd, make it even, to get integers when dividing by 2
+			shownStepsNum++;
+		}
+		// If we are near the end
+		if(currentStep + shownStepsNum / 2 > lastStep) {
+			endStep = lastStep;
+			startStep = lastStep - shownStepsNum;
+		}
+		// If we are near the start
+		else if(currentStep - shownStepsNum / 2 < 0) {
+			startStep = 0;
+			endStep = shownStepsNum;
+		}
+		// Else we will show current step in the middle
+		else {
+			startStep = currentStep - shownStepsNum / 2;
+			endStep = currentStep + shownStepsNum / 2;
+		}
+
+		return {start: startStep, end: endStep};
+	}
+
+
+
+	/*
+	* Renders timeline to given context
+	* @param object 	canvasObj 	Canvas context object
+	*/
+	function renderTimeline(canvasObj) {
+		var ctx = canvasObj.infoLayerCtx; // TODO: where to draw this!?
+		// Get starting and ending step numbers
+		var start = calculateTimelineSteps(canvasObj.width);
+		var end = start.end;
+		start = start.start;
+
+	}
+
+
+	/*
+	* Draws or clears background mesh
+	* @param object 	canvasObj 	Canvas context object
+	* @param boolean 	clear 	Flag indicates if we should clear the mesh, else draw it
+	*/
+	function drawMesh(canvasObj, clear = false) {
+		// TODO: implement
+	}
+
+	/*
 	* Display button that opens menu
 	* @param object 	ctx 	Canvas context to draw on
 	* @param boolean 	show 	Boolean indicating whether to hide or show button
@@ -1119,6 +1221,7 @@ $.fn.evoAnimate = function(props) {
 		var y = 10;
 		var lineheight = 15;
 		var lines = msg.split('\n');
+		ctx.fillStyle = '#FF0000';
 		for (var i = 0; i < lines.length; i++)
 			ctx.fillText(lines[i], x, y + (i * lineheight));
 	}
@@ -1284,20 +1387,29 @@ $.fn.evoAnimate = function(props) {
 					// canvasSize should always be an array of arrays, make sure that is so here
 					if($.isArray(item)) {
 						isArray = true;
+						if(canvasSize[i][0] < SMALLEST_CANVAS_DIM[0] || canvasSize[i][1] < SMALLEST_CANVAS_DIM[1]) {
+							console.warn('Canvas size setting is too small! Problems with menu and controls might occur!');
+						}
 					} else {
 						pass = false;
 					}
 				}
-				if(pass && isArray)
+				if(pass && isArray){
 					CANVAS_SIZE_SETTING = canvasSize;
-				else if(!isArray)
+				} else if(!isArray) {
 					CANVAS_SIZE_SETTING = [canvasSize];
-				else
+					if(CANVAS_SIZE_SETTING[0][0] < SMALLEST_CANVAS_DIM[0] || CANVAS_SIZE_SETTING[0][1] < SMALLEST_CANVAS_DIM[1]) {
+						console.warn('Canvas size setting is too small! Problems with menu and controls might occur!');
+					}
+				} else {
 					console.warn('All items within the canvasSize array must be arrays.');
+				}
 
 			} else {
 				console.warn('The canvasSize property should be an array!');
 			}
+
+
 		}
 		//SourceType
 		var sourceType = props.hasOwnProperty('sourceType') ? props.sourceType.toLowerCase() : 'url';
