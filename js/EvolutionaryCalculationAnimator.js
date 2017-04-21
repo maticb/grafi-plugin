@@ -128,9 +128,6 @@ $.fn.evoAnimate = function(props) {
 	var CANVAS_SHADES_COLORS = ['#E5E5E5', '#CBCBCB', '#B1B1B1', '#979797', '#7D7D7D', '#636363', '	#494949', '#2F2F2F', '#151515', '#000000']; // Array of CANVAS_SHADES_NUM colors
 	var CANVAS_SHADES = {}; // Array that stores numbers, at which a certain shade should start
 
-
-
-
 	/*
 	* Set problem's range, for proper scaling on the canvas
 	* @param object data 	Object with algorithm data
@@ -1080,19 +1077,55 @@ $.fn.evoAnimate = function(props) {
 		return {start: startStep, end: endStep};
 	}
 
-
+	/*
+	* Renders one column in the timeline
+	* @param object 	ctx 	Canvas context
+	* @param integer 	x 		X position of the column
+	* @param integer 	y 		Y position of the column
+	* @param float 		colH 	Column height
+	* @param float 		colO 	Column offset on top
+	* @param integer 	stepPixelWidth 		Width of step column in pixels
+	*/
+	function renderColumn(ctx, x, y, colH, colO, stepPixelWidth = 5) {
+		ctx.fillStyle = '#00FF00';
+		ctx.rect(x, y + colO, stepPixelWidth, colH);
+		ctx.fill();
+	}
 
 	/*
 	* Renders timeline to given context
-	* @param object 	canvasObj 	Canvas context object
+	* @param object 	canvasObj 			Canvas context object
+	* @param integer 	timeLineHeight 		Height of timeline in pixels
+	* @param integer 	stepPixelWidth 		Width of step column in pixels
 	*/
-	function renderTimeline(canvasObj) {
-		var ctx = canvasObj.infoLayerCtx; // TODO: where to draw this!?
+	function renderTimeline(canvasObj, timeLineHeight = 50, stepPixelWidth = 5) {
+		var ctx = canvasObj.bgLayerCtx; // TODO: where to draw this!?
 		// Get starting and ending step numbers
 		var start = calculateTimelineSteps(canvasObj.width);
 		var end = start.end;
 		start = start.start;
 
+		// Starting position for rendering
+		var startX = 0;
+		var startY = canvasObj.height - timeLineHeight - 10;
+
+		//First get maximum fitness of current timeline, so that we can transform heights properly
+		var maxFitness = -99999;
+		for(var i = start; i < end; i++) {
+			var stepData = ANIMATION_DATA.steps[i];
+			maxFitness = maxFitness < stepData.fitness ? stepData.fitness : maxFitness;
+		}
+		console.log(maxFitness);
+
+		for(var i = start; i < end; i++) {
+			var stepData = ANIMATION_DATA.steps[i];
+			var fitness = stepData.fitness;
+			// Transform fitness to a smaller scale
+			var columnHeight = (fitness / maxFitness) * timeLineHeight;
+			var columnOffset = timeLineHeight  - columnHeight;
+			renderColumn(ctx, startX, startY, columnHeight, columnOffset);
+			startX += stepPixelWidth;
+		}
 	}
 
 
@@ -1136,6 +1169,7 @@ $.fn.evoAnimate = function(props) {
 			MENU_SHOWN = false;
 			showHideMenu(MENU_SHOWN, canvasObj);
 		}
+		renderTimeline(canvasObj);
 	}
 
 	/*
