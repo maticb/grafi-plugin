@@ -128,6 +128,14 @@ $.fn.evoAnimate = function(props) {
 	var CANVAS_SHADES_COLORS = ['#E5E5E5', '#CBCBCB', '#B1B1B1', '#979797', '#7D7D7D', '#636363', '	#494949', '#2F2F2F', '#151515', '#000000']; // Array of CANVAS_SHADES_NUM colors
 	var CANVAS_SHADES = {}; // Array that stores numbers, at which a certain shade should start
 
+	// Timeliine globals
+	var TIMELINE_IS_SHOWN = false;
+	var TIMELINE_HEIGHT = 50;
+	var TIMELINE_OFFSET_BOTTOM = 10;
+	var TIMELINE_COLUMN_WIDTH = 5;
+	var TIMELINE_COLUMN_COLOR = '#00AA00';
+	var TIMELINE_GENERATION_DIVIDER_COLOR = '#000000';
+
 	/*
 	* Set problem's range, for proper scaling on the canvas
 	* @param object data 	Object with algorithm data
@@ -180,7 +188,6 @@ $.fn.evoAnimate = function(props) {
 					min = cell;
 			}
 		}
-		max = max;
 		// Create array of zeroes with size: numOfShades
 		var shadeStarts = [];
 		for(var i = 0; i < numOfShades; i++)
@@ -778,6 +785,10 @@ $.fn.evoAnimate = function(props) {
 			c.renderLayerCtx.clearRect(0, 0, c.width, c.height);
 			// Clear shades counter
 			c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width + 1, c.height + 1);
+			if(checkTimelineShown()) {
+				renderTimeline(c);
+			}
+
 		}
 		if(lastGenId < 0) {
 			// First render shades
@@ -1042,18 +1053,24 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
+	* Checks if timeline is shown
+	*/
+	function checkTimelineShown() {
+		return true === TIMELINE_IS_SHOWN ? true : false;
+	}
+
+	/*
 	* Calulates shown steps on the timeline
 	* @param integer 	cWidth 				Width of canvas that timeline is to be rendered on
-	* @param integer 	stepPixelWidth 		Width of step column in pixels
 	* @return returns object with starting and ending step number
 	*/
-	function calculateTimelineSteps(cWidth, stepPixelWidth = 5) {
+	function calculateTimelineSteps(cWidth) {
 		var currentStep = PLAY_STEP;
 		var lastStep = ANIMATION_DATA.steps.length;
 		var startStep = 0;
 		var endStep = 0;
 
-		var shownStepsNum = cWidth / stepPixelWidth;
+		var shownStepsNum = cWidth / TIMELINE_COLUMN_WIDTH;
 
 		if(0 !== shownStepsNum % 2) { // If calulated number is odd, make it even, to get integers when dividing by 2
 			shownStepsNum++;
@@ -1084,22 +1101,20 @@ $.fn.evoAnimate = function(props) {
 	* @param integer 	y 		Y position of the column
 	* @param float 		colH 	Column height
 	* @param float 		colO 	Column offset on top
-	* @param integer 	stepPixelWidth 		Width of step column in pixels
 	*/
-	function renderColumn(ctx, x, y, colH, colO, stepPixelWidth = 5) {
-		ctx.fillStyle = '#00FF00';
-		ctx.rect(x, y + colO, stepPixelWidth, colH);
-		ctx.fill();
+	function renderColumn(ctx, x, y, colH, colO) {
+		ctx.fillStyle = TIMELINE_COLUMN_COLOR;
+		ctx.fillRect(x, y + colO, TIMELINE_COLUMN_WIDTH, colH);
 	}
 
 	/*
 	* Renders timeline to given context
 	* @param object 	canvasObj 			Canvas context object
-	* @param integer 	timeLineHeight 		Height of timeline in pixels
-	* @param integer 	stepPixelWidth 		Width of step column in pixels
 	*/
-	function renderTimeline(canvasObj, timeLineHeight = 50, stepPixelWidth = 5) {
-		var ctx = canvasObj.bgLayerCtx; // TODO: where to draw this!?
+	function renderTimeline(canvasObj) {
+		// First clear timeline
+		clearTimeline(canvasObj);
+		var ctx = canvasObj.infoLayerCtx; // TODO: where to draw this!?
 		// Get starting and ending step numbers
 		var start = calculateTimelineSteps(canvasObj.width);
 		var end = start.end;
@@ -1107,7 +1122,7 @@ $.fn.evoAnimate = function(props) {
 
 		// Starting position for rendering
 		var startX = 0;
-		var startY = canvasObj.height - timeLineHeight - 10;
+		var startY = canvasObj.height - TIMELINE_HEIGHT - TIMELINE_OFFSET_BOTTOM;
 
 		//First get maximum fitness of current timeline, so that we can transform heights properly
 		var maxFitness = -99999;
@@ -1115,16 +1130,41 @@ $.fn.evoAnimate = function(props) {
 			var stepData = ANIMATION_DATA.steps[i];
 			maxFitness = maxFitness < stepData.fitness ? stepData.fitness : maxFitness;
 		}
-		console.log(maxFitness);
+		var prevGen = -1;
 
 		for(var i = start; i < end; i++) {
 			var stepData = ANIMATION_DATA.steps[i];
 			var fitness = stepData.fitness;
 			// Transform fitness to a smaller scale
-			var columnHeight = (fitness / maxFitness) * timeLineHeight;
-			var columnOffset = timeLineHeight  - columnHeight;
+			var columnHeight = (fitness / maxFitness) * TIMELINE_HEIGHT;
+			var columnOffset = TIMELINE_HEIGHT  - columnHeight;
 			renderColumn(ctx, startX, startY, columnHeight, columnOffset);
-			startX += stepPixelWidth;
+			// Add line when new generation starts
+			if(prevGen > 0 ) {
+				if(prevGen !== stepData.generation) {
+					ctx.fillStyle = TIMELINE_GENERATION_DIVIDER_COLOR;
+					ctx.fillRect(startX, startY, 2, TIMELINE_HEIGHT);
+				}
+			}
+			prevGen = stepData.generation;
+			startX += TIMELINE_COLUMN_WIDTH;
+		}
+	}
+
+	/*
+	* Clears timeline
+	* @param object canvasObj 	Canvas object
+	*/
+	function clearTimeline(canvasObj) {
+		var ctx = canvasObj.infoLayerCtx;
+		ctx.clearRect(0, canvasObj.height - TIMELINE_HEIGHT - TIMELINE_OFFSET_BOTTOM, canvasObj.width, TIMELINE_HEIGHT);
+	}
+	/*
+	* Clears all timelines
+	*/
+	function clearAllTimelines() {
+		for( var i in CANVAS_ARR) {
+			clearTimeline(CANVAS_ARR[i]);
 		}
 	}
 
@@ -1169,7 +1209,6 @@ $.fn.evoAnimate = function(props) {
 			MENU_SHOWN = false;
 			showHideMenu(MENU_SHOWN, canvasObj);
 		}
-		renderTimeline(canvasObj);
 	}
 
 	/*
@@ -1329,6 +1368,7 @@ $.fn.evoAnimate = function(props) {
 			.off('mousemove')
 			.on('mousemove', function(e){
 				e.preventDefault();
+				var canvasObj = findCanvasInArr($(e.currentTarget).closest('div').prev()[0]);
 				var canvasCtx = this.getContext('2d');
 
 				var oX = e.offsetX;
@@ -1339,9 +1379,21 @@ $.fn.evoAnimate = function(props) {
 				} else {
 					menuButtonShow(canvasCtx, false);
 				}
+				var timelineTop = canvasObj.height - TIMELINE_HEIGHT - TIMELINE_OFFSET_BOTTOM;
+				var timelineBottom = canvasObj.height - TIMELINE_OFFSET_BOTTOM;
+				// Show timeline on hover
+				if(oY > timelineTop && oY < timelineBottom) {
+					if(!checkTimelineShown()) {
+						TIMELINE_IS_SHOWN = true;
+						renderTimeline(canvasObj);
+					}
+				} else if(checkTimelineShown()) {
+					clearAllTimelines();
+					TIMELINE_IS_SHOWN = false;
+				}
+
 
 				// Display info about points
-				var canvasObj = findCanvasInArr($(e.currentTarget).closest('div').prev()[0]);
 				var clickedPoints = findPointsOnClick(oX, oY, canvasObj);
 				var msg = 'Podatki o točki/točkah: \n';
 				for(var i in clickedPoints) {
