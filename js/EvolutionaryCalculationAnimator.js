@@ -1305,7 +1305,9 @@ $.fn.evoAnimate = function(props) {
 	*/
 	function clearPointInfo(canvasObj) {
 		var ctx = canvasObj.infoLayerCtx;
-		ctx.clearRect(0, 0, canvasObj.width, canvasObj.height);
+		// Dont clear timeline
+		var bottom =  canvasObj.height - TIMELINE_HEIGHT - TIMELINE_OFFSET_BOTTOM;
+		ctx.clearRect(0, 0, canvasObj.width, bottom);
 	}
 
 
@@ -1358,11 +1360,6 @@ $.fn.evoAnimate = function(props) {
 					moveOneStepForward();
 				}
 			});
-			/*.off('contextmenu')
-			.on('contextmenu', function(e) {
-				e.preventDefault();
-				// TODO: contextmenu click on points!
-			});*/
 			// Mousemove event for displaying menu button
 			$canvas
 			.off('mousemove')
