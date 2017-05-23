@@ -40,6 +40,7 @@ Več grafov;
 * - fps 			integer Optional 	Frames per second, defaults to  25
 *
 * - shadingHistory 	boolean Optional 	Display or hide step history with shading, defaults to true
+* - fullPlayback 	boolean Optional 	Defaults to false, if set to true, playback will continue until the end of data
 *
 *	Example configuration of plugin properties:
 
@@ -90,6 +91,9 @@ $.fn.evoAnimate = function(props) {
 	var PLAY_STEP = 0; // Current step number
 	var LAST_GEN_ADD_FRAME = 0; // Stores the number of frames elasped since the last time we added a new generation to the playback
 	var LAST_ADDED_GENERATION = 1; // Id of the last generation added to the rendering
+
+	var FULL_PLAYBACK  = false; // If set to false, play button will only play animation until the end of the generation
+	var PLAYBACK_STARTED_GEN = 1; // Stores the generation number on which playback was started
 
 
 
@@ -750,7 +754,16 @@ $.fn.evoAnimate = function(props) {
         	then = now - (elapsed % fpsInterval);
 			// If canvases are setup
 			if(isSetup()) {
-				moveOneStepForward();
+				// Check if we should only play until the end of generation
+				var currentGen = ANIMATION_DATA.steps.length > PLAY_STEP ? ANIMATION_DATA.steps[PLAY_STEP].generation : PLAYBACK_STARTED_GEN;
+				if(FULL_PLAYBACK){
+					moveOneStepForward();
+				} else if(PLAYBACK_STARTED_GEN === currentGen) {
+					moveOneStepForward();
+				} else {
+					stop();
+					return;
+				}
 			}
 		}
 
@@ -882,6 +895,7 @@ $.fn.evoAnimate = function(props) {
 		// Reset some vars
 		LAST_GEN_ADD_FRAME = 0;
 		LAST_ADDED_GENERATION = 1;
+		PLAYBACK_STARTED_GEN = 1;
 		IS_SETUP = true;
 	}
 
@@ -895,6 +909,12 @@ $.fn.evoAnimate = function(props) {
 			// Set current time and FPS interval
 			fpsInterval = 1000 / fps;
 			then = Date.now();
+			// Store generation we are starting on
+			PLAYBACK_STARTED_GEN = PLAY_STEP > -1 ? ANIMATION_DATA.steps[PLAY_STEP].generation : 1;
+			// If we are on the end of one generation, set start to next generation
+			if(ANIMATION_DATA.steps.length > PLAY_STEP + 1) {
+				PLAYBACK_STARTED_GEN = PLAYBACK_STARTED_GEN !==  ANIMATION_DATA.steps[PLAY_STEP + 1].generation ? ANIMATION_DATA.steps[PLAY_STEP + 1].generation : PLAYBACK_STARTED_GEN;
+			}
 			// Play the animation
 			animationLoop();
 		}
@@ -1163,7 +1183,7 @@ $.fn.evoAnimate = function(props) {
 	* Clears all timelines
 	*/
 	function clearAllTimelines() {
-		for( var i in CANVAS_ARR) {
+		for(var i in CANVAS_ARR) {
 			clearTimeline(CANVAS_ARR[i]);
 		}
 	}
@@ -1514,6 +1534,8 @@ $.fn.evoAnimate = function(props) {
 		USE_SHADING_HISTORY = props.hasOwnProperty('shadingHistory') ? props.shadingHistory : true;
 		//PlayOnLoad
 		var playOnLoad = props.hasOwnProperty('playOnLoad') ? props.playOnLoad : true;
+		//  fullPlayback
+		FULL_PLAYBACK = props.hasOwnProperty('fullPlayback') ? props.fullPlayback : false;
 		// Function when loading is completed, as data can be loaded from ajax.
 		var loadingCompleted = function() {
 			if(playOnLoad) {
