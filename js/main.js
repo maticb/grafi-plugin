@@ -35,7 +35,7 @@ $(document).ready(function(){
 		//source:'http://localhost/diploma/sphere.php',
 		//sourceType: 'URL',
 		display: [[1,2],[4,5],[5,6],[6,7]],
-		canvasSize: [300,300],
+		canvasSize: [300,400],
 		fps:60,
 	});
 });

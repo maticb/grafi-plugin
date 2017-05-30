@@ -71,6 +71,7 @@ $.fn.evoAnimate = function(props) {
 		xIndex: 1, // Index of the algorithm step's X value to be displayed on this canvas's x axis
 		yIndex: 1, // Same for the y axis
 		shadeStartsCounter: [],
+		menuShown: false,
 	};
 
 	// Non-static private vars
@@ -98,7 +99,7 @@ $.fn.evoAnimate = function(props) {
 
 
 	// Playback FPS limiting variables
-	var fps = 600;
+	var fps = 10;
 	var fpsInterval;
 	var now;
 	var then;
@@ -106,7 +107,6 @@ $.fn.evoAnimate = function(props) {
 
 	// Playback user settings
 	var SHOWN_GENERATIONS_NUMBER = 3; // Defines number of generations to be shown on the canvas e.g.: if 3, the last 3 generations will be shown. 0 = all generations.
-	var ADD_GENERATION_AFTER = 1; // Defines the frame interval at which a new generation is added e.g.: 25 -> a new generation is added every 25 frames
 
 
 	// Graphic settings
@@ -119,10 +119,10 @@ $.fn.evoAnimate = function(props) {
 
 	// Line color
 	var LINE_CURRENT_COLOR = '#000000';
+	var LINE_PREVIOUS_COLOR = '#999999';
 
 
 	// Menu layer globals
-	var MENU_SHOWN = false;
 	var MENU_BUTTON_SHOWN = false;
 
 	// Shading history for each canvas
@@ -638,8 +638,9 @@ $.fn.evoAnimate = function(props) {
 	/*
 	* Performs one step of the algorithm
 	* @param object 	stepData 	Data object for the current step
+	* @param bool 		drawLine 	Indicates whether line should be drawn, defaults to true
 	*/
-	function step(stepData) {
+	function step(stepData, drawLine = true) {
 		var hasAtLeastOneParent = false;
 		var parents = [];
 		for(var i in stepData.parentIds) {
@@ -657,7 +658,6 @@ $.fn.evoAnimate = function(props) {
 			var x1 = stepData.x[x];
 			var x2 = stepData.x[y];
 			// Check if parents exist
-			var drawLine = false;
 			var parentCoords = [];
 			hasAtLeastOneParent = false;
 			// Push parnet coordinates for current canvas
@@ -670,7 +670,9 @@ $.fn.evoAnimate = function(props) {
 			}
 
 			// Draw line if it can be shown (only draw lines for the very last generation)
-			drawLine = evolutionUtil.lastItem(RENDERED_GENERATIONS) === stepData.generation ? true : false;
+			if(true === drawLine) {
+				drawLine = evolutionUtil.lastItem(RENDERED_GENERATIONS) === stepData.generation ? true : false;
+			}
 			renderStep(x1, x2, canvasObj, parentCoords, drawLine);
 
 			// "Fade" parents
@@ -1207,9 +1209,11 @@ $.fn.evoAnimate = function(props) {
 		if(show === MENU_BUTTON_SHOWN)
 			return;
 		if(true === show) {
-			//TODO: show some sort of graphic for menu button
 			ctx.fillStyle = '#000000';
 			ctx.fillRect(0,0,30,30);
+			ctx.fillStyle = '#FFFFFF';
+			ctx.font = "10px Arial";
+			ctx.fillText("Menu",3,18);
 			MENU_BUTTON_SHOWN = true;
 		} else {
 			ctx.clearRect(0,0,30,30);
@@ -1222,12 +1226,13 @@ $.fn.evoAnimate = function(props) {
 	* @param object 	canvasObj 	Canvas object to draw menu on
 	*/
 	function menuButtonClicked(canvasObj) {
-		if(false === MENU_SHOWN) {
-			MENU_SHOWN = true;
-			showHideMenu(MENU_SHOWN, canvasObj);
+		console.log('menuButtonClicked: ' + canvasObj.menuShown);
+		if(false === canvasObj.menuShown) {
+			canvasObj.menuShown = true;
+			showHideMenu(canvasObj.menuShown, canvasObj);
 		} else {
-			MENU_SHOWN = false;
-			showHideMenu(MENU_SHOWN, canvasObj);
+			canvasObj.menuShown = false;
+			showHideMenu(canvasObj.menuShown, canvasObj);
 		}
 	}
 
@@ -1239,11 +1244,34 @@ $.fn.evoAnimate = function(props) {
 	*/
 	function showHideMenu(show = true, canvasObj) {
 		var ctx = canvasObj.menuLayerCtx;
+		var cw = canvasObj.width;
+		var ch = canvasObj.height;
 		console.log(show);
 		if(show) {
-			// TODO draw menu
+			var midPointW = cw / 2;
+			var midPointH = ch / 2;
+			var cornerStartW = 0;
+			var cornerStartH = 0;
+			// Only draw 3 rectangles last one will have the outline of the other 3
+			ctx.strokeRect(0, 0, midPointW, midPointH);
+			ctx.strokeRect(midPointW, 0, cw, midPointH);
+			ctx.strokeRect(midPointW, midPointH, cw, ch);
+
+			// Top left corner is play/stop
+
+			// Top right corner is generation step forward
+			cornerStartW = midPointW;
+
+			// Bottom left is step backward
+			cornerStartW = 0;
+			cornerStartH = midPointH;
+
+			// Bottom right is step forward
+			cornerStartW = midPointW;
+
+
 		} else {
-			// TODO hide menu
+			ctx.clearRect(0, 0, cw, ch);
 		}
 	}
 
