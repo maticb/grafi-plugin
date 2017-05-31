@@ -1222,11 +1222,20 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
-	* Function that displays menu when clicking on the show menu button
+	* Function checks if menu is shown on given canvas object
 	* @param object 	canvasObj 	Canvas object to draw menu on
 	*/
-	function menuButtonClicked(canvasObj) {
-		if(false === canvasObj.menuShown) {
+	function checkMenuShown(canvasObj) {
+		return true === canvasObj.menuShown ? true : false;
+	}
+
+	/*
+	* Function that displays menu when clicking on the show menu button
+	* @param object 	canvasObj 	Canvas object to draw menu on
+	* @param boolean 	hdieOnly 	If set to true, only hide menu
+	*/
+	function menuButtonClicked(canvasObj, hideOnly = false) {
+		if(!checkMenuShown(canvasObj) && false === hideOnly) {
 			canvasObj.menuShown = true;
 			showHideMenu(canvasObj.menuShown, canvasObj);
 		} else {
@@ -1256,20 +1265,23 @@ $.fn.evoAnimate = function(props) {
 
 			// Top left corner is play/stop
 			var coords = findCenterOfCorner(canvasObj, 'tl');
-			ctx.fillStyle = '#000000';
-			ctx.fillRect(coords.xMid, coords.yMid, 10, 10);
+			drawBoxWithText(ctx, 'Predvajaj', coords.xMid, coords.yMid);
 
 			// Top right corner is generation step forward
 			coords = findCenterOfCorner(canvasObj, 'tr');
-			ctx.fillRect(coords.xMid, coords.yMid, 10, 10);
+			drawBoxWithText(ctx, 'Korak', coords.xMid, coords.yMid - 10);
+			drawBoxWithText(ctx, 'generacije', coords.xMid, coords.yMid + 10);
 
 			// Bottom left is step backward
 			coords = findCenterOfCorner(canvasObj, 'bl');
-			ctx.fillRect(coords.xMid, coords.yMid, 10, 10);
+			drawBoxWithText(ctx, 'Korak', coords.xMid, coords.yMid - 10);
+			drawBoxWithText(ctx, 'nazaj', coords.xMid, coords.yMid + 10);
+
 
 			// Bottom right is step forward
 			coords = findCenterOfCorner(canvasObj, 'br');
-			ctx.fillRect(coords.xMid, coords.yMid, 10, 10);
+			drawBoxWithText(ctx, 'Korak', coords.xMid, coords.yMid - 10);
+			drawBoxWithText(ctx, 'naprej', coords.xMid, coords.yMid + 10);
 
 
 		} else {
@@ -1278,7 +1290,6 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
-	*
 	* Function that finds the corners and center values of  a (1/4) corner on the canvas
 	* @param object 	canvasObj 	Canvas context object
 	* @param string 	corner 		String defining corner: tl | tr | bl | br (Top Left, Top Right etc.)
@@ -1329,10 +1340,33 @@ $.fn.evoAnimate = function(props) {
 			}
 		}
 
-		/*for(var i in rtrn)
-		rtrn[i] = parseInt(rtrn[i]);*/
-
 		return rtrn;
+	}
+
+	/*
+	* Function that draws a given
+	* @param object 	ctx 		Canvas context object
+	* @param string 	text 		Text to draw inside box
+	* @param int/float 	x 			X coordinate where the middle of the text shall be
+	* @param int/float 	y 			Y coordinate where the middle of the text shall be
+	* @param string 	textColor 	Text color, defaults to black
+	* @param string 	bgColor 	Background color, defaults to grey(-ish)
+	* @param int 		fontSize 	Font size, defaults to 20 pixels
+	* @param int 		padding 	Text padding within the box, on all sides
+	*/
+	function drawBoxWithText(ctx, text, x, y, textColor = '#000000', bgColor = '#999999', fontSize = 20, padding = 5) {
+
+		ctx.font = parseInt(fontSize) + 'px Arial';
+		padding = parseInt(padding);
+		var measurement = ctx.measureText(text);
+		x = x - measurement.width  / 2;
+		y = y - fontSize / 2;
+
+		ctx.fillStyle = bgColor;
+		ctx.fillRect(x, y, measurement.width + padding * 2, fontSize + padding * 2);
+
+		ctx.fillStyle = textColor;
+		ctx.fillText(text, x + padding, y + fontSize);
 	}
 
 	/*
@@ -1447,26 +1481,36 @@ $.fn.evoAnimate = function(props) {
 				// Implementation of controls
 				var cw = canvas.width;
 				var ch = canvas.height;
+
+				var menuBtnTrigger = false;
 				// Top left corner is play/stop
 				if(oX < cw/2 && oY < ch/2) {
 					if(isPlaying())
 						stop();
 					else
 						play();
+					menuBtnTrigger = true;
 				}
 
 				// Top right corner is generation step forward
 				if(oX > cw/2 && oY < ch/2) {
+					menuBtnTrigger = true;
 					moveOneGenerationForward();
 				}
 				// Bottom left is step backward
 				if(oX < cw/2 && oY > ch/2) {
+					menuBtnTrigger = true;
 					moveOneStepBackward();
 				}
 				// Bottom right is step forward
 				if(oX > cw/2 && oY > ch/2) {
+					menuBtnTrigger = true;
 					moveOneStepForward();
 				}
+
+				// If we clicked on any controls, also hide menu
+				if(menuBtnTrigger)
+					menuButtonClicked(canvas, true);
 			});
 			// Mousemove event for displaying menu button
 			$canvas
@@ -1484,6 +1528,11 @@ $.fn.evoAnimate = function(props) {
 				} else {
 					menuButtonShow(canvasCtx, false);
 				}
+
+				// Only shows timeline and point info, if menu is not displayed
+				if(checkMenuShown(canvasObj))
+					return;
+
 				var timelineTop = canvasObj.height - TIMELINE_HEIGHT - TIMELINE_OFFSET_BOTTOM;
 				var timelineBottom = canvasObj.height - TIMELINE_OFFSET_BOTTOM;
 				// Show timeline on hover
