@@ -1226,7 +1226,6 @@ $.fn.evoAnimate = function(props) {
 	* @param object 	canvasObj 	Canvas object to draw menu on
 	*/
 	function menuButtonClicked(canvasObj) {
-		console.log('menuButtonClicked: ' + canvasObj.menuShown);
 		if(false === canvasObj.menuShown) {
 			canvasObj.menuShown = true;
 			showHideMenu(canvasObj.menuShown, canvasObj);
@@ -1246,33 +1245,94 @@ $.fn.evoAnimate = function(props) {
 		var ctx = canvasObj.menuLayerCtx;
 		var cw = canvasObj.width;
 		var ch = canvasObj.height;
-		console.log(show);
 		if(show) {
 			var midPointW = cw / 2;
 			var midPointH = ch / 2;
-			var cornerStartW = 0;
-			var cornerStartH = 0;
-			// Only draw 3 rectangles last one will have the outline of the other 3
-			ctx.strokeRect(0, 0, midPointW, midPointH);
+
+			// Only draw 2 rectangles to show grid for menu
+			ctx.strokeStyle = '#FF0000';
 			ctx.strokeRect(midPointW, 0, cw, midPointH);
-			ctx.strokeRect(midPointW, midPointH, cw, ch);
+			ctx.strokeRect(0, midPointH, midPointW, ch);
 
 			// Top left corner is play/stop
+			var coords = findCenterOfCorner(canvasObj, 'tl');
+			ctx.fillStyle = '#000000';
+			ctx.fillRect(coords.xMid, coords.yMid, 10, 10);
 
 			// Top right corner is generation step forward
-			cornerStartW = midPointW;
+			coords = findCenterOfCorner(canvasObj, 'tr');
+			ctx.fillRect(coords.xMid, coords.yMid, 10, 10);
 
 			// Bottom left is step backward
-			cornerStartW = 0;
-			cornerStartH = midPointH;
+			coords = findCenterOfCorner(canvasObj, 'bl');
+			ctx.fillRect(coords.xMid, coords.yMid, 10, 10);
 
 			// Bottom right is step forward
-			cornerStartW = midPointW;
+			coords = findCenterOfCorner(canvasObj, 'br');
+			ctx.fillRect(coords.xMid, coords.yMid, 10, 10);
 
 
 		} else {
 			ctx.clearRect(0, 0, cw, ch);
 		}
+	}
+
+	/*
+	*
+	* Function that finds the corners and center values of  a (1/4) corner on the canvas
+	* @param object 	canvasObj 	Canvas context object
+	* @param string 	corner 		String defining corner: tl | tr | bl | br (Top Left, Top Right etc.)
+	* @return object 				Returns an object containint the boundaries and mid point of given corner
+	*/
+	function findCenterOfCorner(canvasObj, corner) {
+		var cw = parseFloat(canvasObj.width);
+		var ch = parseFloat(canvasObj.height);
+		// Object containig all coordinates in a corner
+		var rtrn = {
+			xStart: 0,
+			xEnd: cw,
+			yStart: 0,
+			yEnd: ch,
+			xMid: 0,
+			yMid: 0,
+		};
+		var midPointW = cw / 2;
+		var midPointH = ch / 2;
+		switch(corner.toLowerCase()) {
+			case 'tl': {
+				rtrn.xEnd = midPointW;
+				rtrn.yEnd = midPointH;
+				rtrn.xMid = rtrn.xEnd / 2;
+				rtrn.yMid = rtrn.yEnd / 2;
+				break;
+			}
+			case 'tr': {
+				rtrn.xStart = midPointW;
+				rtrn.yEnd = midPointH;
+				rtrn.xMid = rtrn.xEnd * 0.75;
+				rtrn.yMid = rtrn.yEnd / 2;
+				break;
+			}
+			case 'bl': {
+				rtrn.xEnd = midPointW;
+				rtrn.yStart = midPointH;
+				rtrn.xMid = rtrn.xEnd / 2;
+				rtrn.yMid = rtrn.yEnd * 0.75 ;
+				break;
+			}
+			case 'br': {
+				rtrn.xStart = midPointW;
+				rtrn.yStart = midPointH;
+				rtrn.xMid = rtrn.xEnd * 0.75 ;
+				rtrn.yMid = rtrn.yEnd * 0.75 ;
+				break;
+			}
+		}
+
+		/*for(var i in rtrn)
+		rtrn[i] = parseInt(rtrn[i]);*/
+
+		return rtrn;
 	}
 
 	/*
