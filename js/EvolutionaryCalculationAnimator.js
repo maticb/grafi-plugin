@@ -555,12 +555,20 @@ $.fn.evoAnimate = function(props) {
 	* @param object 	canvasObj 			Object with canvas data
 	* @param array 		parentCoords 	 Array of coordinate objects for N parents
 	* @param boolean 	drawLine 		Indicates if line is to be drawn from current point to parents
+	* @param boolean 	drawCircle 		Indicates if circle should be drawn around point
 	*/
-	function renderStep(x, y = 0, canvasObj, parentCoords,  drawLine = true) {
+	function renderStep(x, y = 0, canvasObj, parentCoords,  drawLine = true, drawCircle = false) {
 		var ctx = canvasObj.renderLayerCtx;
 		ctx.fillStyle = POINT_CURRENT_COLOR;
 		var physicalCoords = coordinateTransform(canvasObj, x, y);
 		ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
+
+		if(true === drawCircle) {
+			ctx.beginPath();
+			ctx.arc(physicalCoords.x, physicalCoords.y, 5, 0, 2*Math.PI);
+			ctx.stroke();
+		}
+
 		// Add line from the previously drawn point
 		if(true === drawLine) {
 			ctx.strokeStyle = LINE_CURRENT_COLOR;
@@ -580,28 +588,28 @@ $.fn.evoAnimate = function(props) {
 
 	/*
 	* Fades given points (previous generation)
-	* @param object 	ctxObj 		Object with canvas data
+	* @param object 	canvasObj 		Object with canvas data
 	* @param array 		parents 	Array of parents, should always be only 2
 	* @param integer 	childX 		Child's X coordinate
 	* @param integer 	childY 		Child's Y coordinate
 	* @param integer 	childGenId 	Child's generation ID
 	*/
-	function fadePoints(ctxObj, parents, childX, childY, childGenId) {
+	function fadePoints(canvasObj, parents, childX, childY, childGenId) {
 		if(!checkGenIsShown(childGenId - 1))
 			return;
-		var ctx = ctxObj.renderLayerCtx;
+		var ctx = canvasObj.renderLayerCtx;
 		// X and Y axis values are stored via the indexes, which start with 1 (X1 = 1)
-		var x = ctxObj.xIndex - 1;
-		var y = ctxObj.yIndex - 1;
+		var x = canvasObj.xIndex - 1;
+		var y = canvasObj.yIndex - 1;
 		// Convert child coordinates to physical
-		var physicalCoords = coordinateTransform(ctxObj, childX, childY);
+		var physicalCoords = coordinateTransform(canvasObj, childX, childY);
 		childX = physicalCoords.x;
 		childY = physicalCoords.y;
 		for(var i in parents) {
 			var parent = parents[i];
 			// Both parents get POINT_PREVIOUS_GEN_COLOR
 			ctx.fillStyle = POINT_PREVIOUS_GEN_COLOR;
-			physicalCoords = coordinateTransform(ctxObj, parent.x[x], parent.x[y]);
+			physicalCoords = coordinateTransform(canvasObj, parent.x[x], parent.x[y]);
 			ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
 
 			// First check if we can show parents
@@ -612,7 +620,7 @@ $.fn.evoAnimate = function(props) {
 					var parentsParent = -1 !== parent.parentIds[i] ? findStepById(parent.parentIds[i]) : undefined;
 					if(undefined === parentsParent)
 						continue;
-					physicalCoords = coordinateTransform(ctxObj, parentsParent.x[x], parentsParent.x[y]);
+					physicalCoords = coordinateTransform(canvasObj, parentsParent.x[x], parentsParent.x[y]);
 					ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
 				}
 			}
@@ -638,9 +646,10 @@ $.fn.evoAnimate = function(props) {
 	/*
 	* Performs one step of the algorithm
 	* @param object 	stepData 	Data object for the current step
+	* @param bool 		drawCircle 	Indicates whether circle should be drawn around point (to be used for the last point)
 	* @param bool 		drawLine 	Indicates whether line should be drawn, defaults to true
 	*/
-	function step(stepData, drawLine = true) {
+	function step(stepData, drawCircle = false, drawLine = true) {
 		var hasAtLeastOneParent = false;
 		var parents = [];
 		for(var i in stepData.parentIds) {
@@ -673,7 +682,7 @@ $.fn.evoAnimate = function(props) {
 			if(true === drawLine) {
 				drawLine = evolutionUtil.lastItem(RENDERED_GENERATIONS) === stepData.generation ? true : false;
 			}
-			renderStep(x1, x2, canvasObj, parentCoords, drawLine);
+			renderStep(x1, x2, canvasObj, parentCoords, drawLine, drawCircle);
 
 			// "Fade" parents
 			if(hasAtLeastOneParent) {
@@ -864,7 +873,11 @@ $.fn.evoAnimate = function(props) {
 			}
 
 			for(;startStep < lastGenStepId; startStep++) {
-				step(ANIMATION_DATA.steps[startStep]);
+				// We shall draw a circle on the last
+				if(startStep !== lastGenStepId - 1)
+					step(ANIMATION_DATA.steps[startStep]);
+				else
+					step(ANIMATION_DATA.steps[startStep], true);
 			}
 			PLAY_STEP = startStep;
 		}
