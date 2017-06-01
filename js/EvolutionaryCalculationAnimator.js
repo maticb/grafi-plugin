@@ -555,15 +555,15 @@ $.fn.evoAnimate = function(props) {
 	* @param object 	canvasObj 			Object with canvas data
 	* @param array 		parentCoords 	 Array of coordinate objects for N parents
 	* @param boolean 	drawLine 		Indicates if line is to be drawn from current point to parents
-	* @param boolean 	drawCircle 		Indicates if circle should be drawn around point
+	* @param boolean 	lastStep 		Indicates if it is the last step (of those currently rendered)
 	*/
-	function renderStep(x, y = 0, canvasObj, parentCoords,  drawLine = true, drawCircle = false) {
+	function renderStep(x, y = 0, canvasObj, parentCoords,  drawLine = true, lastStep = false) {
 		var ctx = canvasObj.renderLayerCtx;
 		ctx.fillStyle = POINT_CURRENT_COLOR;
 		var physicalCoords = coordinateTransform(canvasObj, x, y);
 		ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
 
-		if(true === drawCircle) {
+		if(true === lastStep) {
 			ctx.beginPath();
 			ctx.arc(physicalCoords.x, physicalCoords.y, 5, 0, 2*Math.PI);
 			ctx.stroke();
@@ -571,7 +571,7 @@ $.fn.evoAnimate = function(props) {
 
 		// Add line from the previously drawn point
 		if(true === drawLine) {
-			ctx.strokeStyle = LINE_CURRENT_COLOR;
+			ctx.strokeStyle = false === lastStep ? LINE_PREVIOUS_COLOR : LINE_CURRENT_COLOR;
 			for(var i in parentCoords) {
 				var coords = parentCoords[i];
 				prevCoords = coordinateTransform(canvasObj, coords.x, coords.y);
@@ -646,10 +646,10 @@ $.fn.evoAnimate = function(props) {
 	/*
 	* Performs one step of the algorithm
 	* @param object 	stepData 	Data object for the current step
-	* @param bool 		drawCircle 	Indicates whether circle should be drawn around point (to be used for the last point)
+	* @param bool 		lastStep 	Indicates last step (draw circle and change line color for last step)
 	* @param bool 		drawLine 	Indicates whether line should be drawn, defaults to true
 	*/
-	function step(stepData, drawCircle = false, drawLine = true) {
+	function step(stepData, lastStep = false, drawLine = true) {
 		var hasAtLeastOneParent = false;
 		var parents = [];
 		for(var i in stepData.parentIds) {
@@ -682,7 +682,7 @@ $.fn.evoAnimate = function(props) {
 			if(true === drawLine) {
 				drawLine = evolutionUtil.lastItem(RENDERED_GENERATIONS) === stepData.generation ? true : false;
 			}
-			renderStep(x1, x2, canvasObj, parentCoords, drawLine, drawCircle);
+			renderStep(x1, x2, canvasObj, parentCoords, drawLine, lastStep);
 
 			// "Fade" parents
 			if(hasAtLeastOneParent) {
