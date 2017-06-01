@@ -140,6 +140,9 @@ $.fn.evoAnimate = function(props) {
 	var TIMELINE_COLUMN_COLOR = '#00AA00';
 	var TIMELINE_GENERATION_DIVIDER_COLOR = '#000000';
 
+	// Playback settings that can be changed by the user
+	var JUMP_OVER_GENERATIONS_NUM = 10; // Number of generations to jump over when clicking next generation
+
 	/*
 	* Set problem's range, for proper scaling on the canvas
 	* @param object data 	Object with algorithm data
@@ -638,7 +641,7 @@ $.fn.evoAnimate = function(props) {
 		//Make sure step is set to the start of the generation
 		var stepId = GENERATION_STARTS[genNumber - 1];
 		for(var i = 0; i < generationLength; i++) {
-			step(data.steps[stepId++]);
+			step(data.steps[stepId++], false, false);
 		}
 		PLAY_STEP = stepId;
 	}
@@ -800,8 +803,9 @@ $.fn.evoAnimate = function(props) {
 	* If  lastGenId is above 0, lastGenStepId must be set. This will render all shown generations up to the lastGenId one, and only all steps up to lastGenStepId will be rendered in that one
 	* @param integer 	lastGenId			Id of last gen to render
 	* @param integer	lastGenStepId 		Id of the step to render up to in last generation
+	* @param boolean 	drawLines 			Indicates whether lines should be drawn or not
 	*/
-	var renderGenerations = function(lastGenId = -1, lastGenStepId = -1) {
+	var renderGenerations = function(lastGenId = -1, lastGenStepId = -1, drawLines = true) {
 		// Clear canvases
 		for(var i in CANVAS_ARR) {
 			var c = CANVAS_ARR[i];
@@ -812,7 +816,6 @@ $.fn.evoAnimate = function(props) {
 			if(checkTimelineShown()) {
 				renderTimeline(c);
 			}
-
 		}
 		if(lastGenId < 0) {
 			// First render shades
@@ -820,7 +823,7 @@ $.fn.evoAnimate = function(props) {
 			// Draw all shown generations every frame, remove and add according to the settings
 			if(0 === SHOWN_GENERATIONS_NUMBER) {
 				for(var i = 1; i < ANIMATION_DATA.lastGeneration; i++) {
-					stepGen(i);
+					stepGen(ANIMATION_DATA, i);
 				}
 			} else {
 				for(var i in RENDERED_GENERATIONS) {
@@ -874,15 +877,36 @@ $.fn.evoAnimate = function(props) {
 
 			for(;startStep < lastGenStepId; startStep++) {
 				// We shall draw a circle on the last
-				if(startStep !== lastGenStepId - 1)
-					step(ANIMATION_DATA.steps[startStep]);
-				else
-					step(ANIMATION_DATA.steps[startStep], true);
+				if(startStep !== lastGenStepId - 1) {
+					step(ANIMATION_DATA.steps[startStep], false, drawLines);
+				} else {
+					step(ANIMATION_DATA.steps[startStep], true === drawLines ? true : false, drawLines);
+				}
 			}
 			PLAY_STEP = startStep;
 		}
 	}
 
+	/*
+	* Check if we moved into a step that is a different generation, and should update rendered generations
+	* @param object 	generationNum 	Generation number were checking this on
+	*/
+	function checkRenderedGenerations(generationNum) {
+		// If we are still in the same generation
+		if(LAST_ADDED_GENERATION  === generationNum)
+			return;
+		if(LAST_ADDED_GENERATION <= LAST_GENERATION) {
+			// Else increment to next generation
+			LAST_ADDED_GENERATION++;
+			LAST_GEN_ADD_FRAME = 0;
+			//Add one generation
+			RENDERED_GENERATIONS.push(LAST_ADDED_GENERATION);
+			// Delete one, if there are more in the array than it is set in SHOWN_GENERATIONS_NUMBER
+			if(RENDERED_GENERATIONS.length > SHOWN_GENERATIONS_NUMBER && 0 !== SHOWN_GENERATIONS_NUMBER) {
+				RENDERED_GENERATIONS.splice(0,1);
+			}
+		}
+	}
 
 
 	/*
@@ -946,27 +970,6 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
-	* Check if we moved into a step that is a different generation, and should update rendered generations
-	* @param object 	generationNum 	Generation number were checking this on
-	*/
-	function checkRenderedGenerations(generationNum) {
-		// If we are still in the same generation
-		if(LAST_ADDED_GENERATION  === generationNum)
-			return;
-		if(LAST_ADDED_GENERATION <= LAST_GENERATION) {
-			// Else increment to next generation
-			LAST_ADDED_GENERATION++;
-			LAST_GEN_ADD_FRAME = 0;
-			//Add one generation
-			RENDERED_GENERATIONS.push(LAST_ADDED_GENERATION);
-			// Delete one, if there are more in the array than it is set in SHOWN_GENERATIONS_NUMBER
-			if(RENDERED_GENERATIONS.length > SHOWN_GENERATIONS_NUMBER && 0 !== SHOWN_GENERATIONS_NUMBER) {
-				RENDERED_GENERATIONS.splice(0,1);
-			}
-		}
-	}
-
-	/*
 	* Moves one step forward
 	*/
 	var moveOneStepForward = function() {
@@ -1025,7 +1028,7 @@ $.fn.evoAnimate = function(props) {
 			}
 		}
 		setRenderedGenerations(i);
-		renderGenerations(i, 0);
+		renderGenerations(i, 0, false);
 	}
 
 	/*
@@ -1055,14 +1058,27 @@ $.fn.evoAnimate = function(props) {
 		if(num >= 0 && num <= ANIMATION_DATA.lastGeneration) {
 			// Make sure rendered generations stores the correct numbers
 			if(0 === SHOWN_GENERATIONS_NUMBER) {
-				renderGenerations();
+				renderGenerations(num, -1, false);
 			} else {
 				setRenderedGenerations(num);
-				renderGenerations(num);
+				renderGenerations(num, -1, false);
 			}
 		} else {
 			console.warn('Error: Generation number out of bounds! Last generation: ' + ANIMATION_DATA.lastGeneration);
 		}
+	}
+
+	/*
+	* Move N generations forward
+	* @param integer 	num 	Number of generations to skip, defaults to the global JUMP_OVER_GENERATIONS_NUM variable
+	*/
+	var jumpNGenerations = function(num = JUMP_OVER_GENERATIONS_NUM) {
+		// Make sure step with ID PLAY_STEP exsists, probably an unnecessary guard
+		var currentStepGen = ANIMATION_DATA.steps[PLAY_STEP] ? ANIMATION_DATA.steps[PLAY_STEP].generation : evolutionUtil.lastItem(ANIMATION_DATA.steps).generation;
+		num = currentStepGen +  parseInt(num);
+		// If we get a number higher than the last generation, jump to last generation
+		num = evolutionUtil.lastItem(ANIMATION_DATA.steps).generation < num ? evolutionUtil.lastItem(ANIMATION_DATA.steps).generation : num;
+		moveToGenerationN(num);
 	}
 
 
@@ -1283,7 +1299,7 @@ $.fn.evoAnimate = function(props) {
 			// Top right corner is generation step forward
 			coords = findCenterOfCorner(canvasObj, 'tr');
 			drawBoxWithText(ctx, 'Korak', coords.xMid, coords.yMid - 10);
-			drawBoxWithText(ctx, 'generacije', coords.xMid, coords.yMid + 10);
+			drawBoxWithText(ctx, 'generacij', coords.xMid, coords.yMid + 10);
 
 			// Bottom left is step backward
 			coords = findCenterOfCorner(canvasObj, 'bl');
@@ -1508,7 +1524,7 @@ $.fn.evoAnimate = function(props) {
 				// Top right corner is generation step forward
 				if(oX > cw/2 && oY < ch/2) {
 					menuBtnTrigger = true;
-					moveOneGenerationForward();
+					jumpNGenerations();
 				}
 				// Bottom left is step backward
 				if(oX < cw/2 && oY > ch/2) {
