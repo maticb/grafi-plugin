@@ -1366,6 +1366,12 @@ $.fn.evoAnimate = function(props) {
 			drawBoxWithText(ctx, 'naprej', coords.xMid, coords.yMid + 10);
 
 
+			// Button(s) on the bottom
+			// 1px is border, 31 = 1 brder + 20 font size + 5 padding on top and bottom
+			drawBoxWithText(ctx, 'Nastavitve', 1, canvasObj.height -31, false)
+
+
+
 		} else {
 			ctx.clearRect(0, 0, cw, ch);
 		}
@@ -1431,18 +1437,21 @@ $.fn.evoAnimate = function(props) {
 	* @param string 	text 		Text to draw inside box
 	* @param int/float 	x 			X coordinate where the middle of the text shall be
 	* @param int/float 	y 			Y coordinate where the middle of the text shall be
+	* @param boolean 	center		Indicates whether the given coordinates should be the center of the box
 	* @param string 	textColor 	Text color, defaults to black
 	* @param string 	bgColor 	Background color, defaults to grey(-ish)
 	* @param int 		fontSize 	Font size, defaults to 20 pixels
 	* @param int 		padding 	Text padding within the box, on all sides
 	*/
-	function drawBoxWithText(ctx, text, x, y, textColor = '#000000', bgColor = '#999999', fontSize = 20, padding = 5) {
+	function drawBoxWithText(ctx, text, x, y, center = true, textColor = '#000000', bgColor = '#999999', fontSize = 20, padding = 5) {
 
 		ctx.font = parseInt(fontSize) + 'px Arial';
 		padding = parseInt(padding);
 		var measurement = ctx.measureText(text);
-		x = x - measurement.width  / 2;
-		y = y - fontSize / 2;
+		if(true === center) {
+			x = x - measurement.width  / 2;
+			y = y - fontSize / 2;
+		}
 
 		ctx.fillStyle = bgColor;
 		ctx.fillRect(x, y, measurement.width + padding * 2, fontSize + padding * 2);
@@ -1534,6 +1543,14 @@ $.fn.evoAnimate = function(props) {
 		ctx.clearRect(0, 0, canvasObj.width, bottom);
 	}
 
+	/**
+	* Shows or hides settings
+	* @param  object 	canvassObj 	Canvas context object
+	*/
+	function settingsShowHide(canvasObj) {
+		// TODO:implement
+		console.log('settings');
+	}
 
 
 	/*
@@ -1563,6 +1580,13 @@ $.fn.evoAnimate = function(props) {
 				// Implementation of controls
 				var cw = canvas.width;
 				var ch = canvas.height;
+
+				// If menu is shown, also trigger "Nastavitve" button
+				// Bottom left is step backward
+				if(oX < cw/2 && oY > canvas.height - 30) {
+					settingsShowHide(canvas);
+					return;
+				}
 
 				var menuBtnTrigger = false;
 				// Top left corner is play/stop
