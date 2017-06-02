@@ -1243,13 +1243,13 @@ $.fn.evoAnimate = function(props) {
 			MESH_IS_SHOWN = false;
 			return;
 		}
-
-		var lineMarginX = parseFloat(canvasObj.width) / MESH_LINE_NUMBERS;
-		var lineMarginY = parseFloat(canvasObj.height) / MESH_LINE_NUMBERS;
+		// Subtract 1, which is the left/up side border
+		var lineMarginX = parseFloat(canvasObj.width) / MESH_LINE_NUMBERS - 1;
+		var lineMarginY = parseFloat(canvasObj.height) / MESH_LINE_NUMBERS - 1;
 
 		var x = lineMarginX;
 		var y = lineMarginY;
-		// We loop for 1 less, because 1 is a border
+		// We loop for 1 less, because 1 is a border (right/bottom)
 		for(var i = 0; i < MESH_LINE_NUMBERS - 1; i++) {
 			drawLine(ctx, x, 0, x, canvasObj.height, '#FF0000');
 			drawLine(ctx, 0, y, canvasObj.width, y, '#FF0000');
