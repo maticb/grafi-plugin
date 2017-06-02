@@ -140,8 +140,14 @@ $.fn.evoAnimate = function(props) {
 	var TIMELINE_COLUMN_COLOR = '#00AA00';
 	var TIMELINE_GENERATION_DIVIDER_COLOR = '#000000';
 
+	// Mesh
+	var MESH_LINE_NUMBERS = 10;
+	var MESH_IS_SHOWN = false;
+
+
 	// Playback settings that can be changed by the user
 	var JUMP_OVER_GENERATIONS_NUM = 10; // Number of generations to jump over when clicking next generation
+
 
 	/*
 	* Set problem's range, for proper scaling on the canvas
@@ -737,6 +743,11 @@ $.fn.evoAnimate = function(props) {
 		c.renderCanvas = $('#' + tmpID);
 		c.renderLayerCtx = c.renderCanvas[0].getContext('2d');
 
+		//Create layer for mesh
+		tmpID = c.canvasStack.createLayer();
+		c.meshCanvas = $('#' + tmpID);
+		c.meshLayerCtx = c.meshCanvas[0].getContext('2d');
+
 		// Create info layer
 		tmpID = c.canvasStack.createLayer();
 		c.infoCanvas = $('#' + tmpID);
@@ -1223,10 +1234,52 @@ $.fn.evoAnimate = function(props) {
 	/*
 	* Draws or clears background mesh
 	* @param object 	canvasObj 	Canvas context object
-	* @param boolean 	clear 	Flag indicates if we should clear the mesh, else draw it
 	*/
-	function drawMesh(canvasObj, clear = false) {
-		// TODO: implement
+	function drawMesh(canvasObj) {
+		var ctx = canvasObj.meshLayerCtx;
+
+		if(checkMeshShown()) {
+			ctx.clearRect(0, 0, canvasObj.width, canvasObj.height);
+			MESH_IS_SHOWN = false;
+			return;
+		}
+
+		var lineMarginX = parseFloat(canvasObj.width) / MESH_LINE_NUMBERS;
+		var lineMarginY = parseFloat(canvasObj.height) / MESH_LINE_NUMBERS;
+
+		var x = lineMarginX;
+		var y = lineMarginY;
+		// We loop for 1 less, because 1 is a border
+		for(var i = 0; i < MESH_LINE_NUMBERS - 1; i++) {
+			drawLine(ctx, x, 0, x, canvasObj.height, '#FF0000');
+			drawLine(ctx, 0, y, canvasObj.width, y, '#FF0000');
+			x += lineMarginX;
+			y += lineMarginY;
+		}
+		MESH_IS_SHOWN = true;
+	}
+	/**
+	 * Function draws a line from point to point
+	 * @param  object 	ctx 	Canvas context
+	 * @param  integer 	x 		Starting point X value
+	 * @param  integer 	y 		Starting point Y value
+	 * @param  integer 	x1 		End point X value
+	 * @param  integer 	y1 		End point Y value
+	 * @param  String	color 	Line color, defaults to black
+	 */
+	 function drawLine(ctx, x = 0, y = 0, x1 = 0, y1 = 0, color = '#000000') {
+	 	ctx.strokeStyle = color;
+	 	ctx.beginPath();
+	 	ctx.moveTo(x,y);
+	 	ctx.lineTo(x1,y1);
+	 	ctx.stroke();
+	 }
+
+	/*
+	* Checks if mesh is shown
+	*/
+	function checkMeshShown() {
+		return true === MESH_IS_SHOWN ? true : false;
 	}
 
 	/*
