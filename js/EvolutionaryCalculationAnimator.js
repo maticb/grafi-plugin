@@ -1259,21 +1259,21 @@ $.fn.evoAnimate = function(props) {
 		MESH_IS_SHOWN = true;
 	}
 	/**
-	 * Function draws a line from point to point
-	 * @param  object 	ctx 	Canvas context
-	 * @param  integer 	x 		Starting point X value
-	 * @param  integer 	y 		Starting point Y value
-	 * @param  integer 	x1 		End point X value
-	 * @param  integer 	y1 		End point Y value
-	 * @param  String	color 	Line color, defaults to black
-	 */
-	 function drawLine(ctx, x = 0, y = 0, x1 = 0, y1 = 0, color = '#000000') {
-	 	ctx.strokeStyle = color;
-	 	ctx.beginPath();
-	 	ctx.moveTo(x,y);
-	 	ctx.lineTo(x1,y1);
-	 	ctx.stroke();
-	 }
+	* Function draws a line from point to point
+	* @param  object 	ctx 	Canvas context
+	* @param  integer 	x 		Starting point X value
+	* @param  integer 	y 		Starting point Y value
+	* @param  integer 	x1 		End point X value
+	* @param  integer 	y1 		End point Y value
+	* @param  String	color 	Line color, defaults to black
+	*/
+	function drawLine(ctx, x = 0, y = 0, x1 = 0, y1 = 0, color = '#000000') {
+		ctx.strokeStyle = color;
+		ctx.beginPath();
+		ctx.moveTo(x,y);
+		ctx.lineTo(x1,y1);
+		ctx.stroke();
+	}
 
 	/*
 	* Checks if mesh is shown
