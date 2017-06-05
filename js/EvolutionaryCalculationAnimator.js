@@ -139,6 +139,7 @@ $.fn.evoAnimate = function(props) {
 	var TIMELINE_COLUMN_WIDTH = 5;
 	var TIMELINE_COLUMN_COLOR = '#00AA00';
 	var TIMELINE_GENERATION_DIVIDER_COLOR = '#000000';
+	var TIMELINE_MAX_FITNESS = -999999999;
 
 	// Mesh
 	var MESH_LINE_NUMBERS = 10;
@@ -156,6 +157,7 @@ $.fn.evoAnimate = function(props) {
 	function setProblemRange(data) {
 		var min = 9999;
 		var max = -9999;
+
 		for(var i in data.steps){
 			var step = data.steps[i];
 			for(var j in step.x) {
@@ -163,6 +165,8 @@ $.fn.evoAnimate = function(props) {
 				min = x < min ? x : min;
 				max = x > max ? x : max;
 			}
+
+			TIMELINE_MAX_FITNESS = TIMELINE_MAX_FITNESS < step.fitness ? step.fitness : TIMELINE_MAX_FITNESS;
 		}
 		data.problemRange = (max - min);
 		data.problemLowestNum = min;
@@ -188,6 +192,7 @@ $.fn.evoAnimate = function(props) {
 			coords.y = Math.floor(coords.y);
 			array[coords.x][coords.y]++;
 		}
+
 		// Find the cell with the maximum amount of steps on it
 		var max = -1;
 		var min = 9999999;
@@ -197,7 +202,9 @@ $.fn.evoAnimate = function(props) {
 				var cell = row[j];
 				if(cell > max)
 					max = cell;
-				if(cell < min && cell > 0)
+
+				//TODO: test this when we get better data!
+				if(cell < min && cell > 5)
 					min = cell;
 			}
 		}
@@ -227,6 +234,7 @@ $.fn.evoAnimate = function(props) {
 			}
 		}
 		CANVAS_SHADES[canvasObj.id] = shadeStarts;
+		console.log(CANVAS_SHADES[canvasObj.id]); //TEMP debug
 	}
 
 
@@ -629,6 +637,7 @@ $.fn.evoAnimate = function(props) {
 					var parentsParent = -1 !== parent.parentIds[i] ? findStepById(parent.parentIds[i]) : undefined;
 					if(undefined === parentsParent)
 						continue;
+					//TODO: ko bojo "pravi" podatki, preglej če se točke kar naprej ponavaljajo pod tem levelom parnetov
 					physicalCoords = coordinateTransform(canvasObj, parentsParent.x[x], parentsParent.x[y]);
 					ctx.fillRect(physicalCoords.x, physicalCoords.y, 2, 2);
 				}
@@ -829,6 +838,7 @@ $.fn.evoAnimate = function(props) {
 			}
 		}
 		if(lastGenId < 0) {
+			// TODO: This code is never used
 			// First render shades
 			renderAllCanvasesShades();
 			// Draw all shown generations every frame, remove and add according to the settings
@@ -887,7 +897,7 @@ $.fn.evoAnimate = function(props) {
 			}
 
 			for(;startStep < lastGenStepId; startStep++) {
-				// We shall draw a circle on the last
+				// We shall draw a circle on the last step
 				if(startStep !== lastGenStepId - 1) {
 					step(ANIMATION_DATA.steps[startStep], false, drawLines);
 				} else {
@@ -1185,20 +1195,13 @@ $.fn.evoAnimate = function(props) {
 		// Starting position for rendering
 		var startX = 0;
 		var startY = canvasObj.height - TIMELINE_HEIGHT - TIMELINE_OFFSET_BOTTOM;
-
-		//First get maximum fitness of current timeline, so that we can transform heights properly
-		var maxFitness = -99999;
-		for(var i = start; i < end; i++) {
-			var stepData = ANIMATION_DATA.steps[i];
-			maxFitness = maxFitness < stepData.fitness ? stepData.fitness : maxFitness;
-		}
 		var prevGen = -1;
 
 		for(var i = start; i < end; i++) {
 			var stepData = ANIMATION_DATA.steps[i];
 			var fitness = stepData.fitness;
 			// Transform fitness to a smaller scale
-			var columnHeight = (fitness / maxFitness) * TIMELINE_HEIGHT;
+			var columnHeight = (fitness / TIMELINE_MAX_FITNESS) * TIMELINE_HEIGHT;
 			var columnOffset = TIMELINE_HEIGHT  - columnHeight;
 			renderColumn(ctx, startX, startY, columnHeight, columnOffset);
 			// Add line when new generation starts
@@ -1479,6 +1482,7 @@ $.fn.evoAnimate = function(props) {
 		var firstGen = 0 === SHOWN_GENERATIONS_NUMBER ? 1 : RENDERED_GENERATIONS[0];
 		var startStep = GENERATION_STARTS[firstGen - 1];
 		var lastStep = 0 === SHOWN_GENERATIONS_NUMBER ? ANIMATION_DATA.steps.length :  GENERATION_STARTS[evolutionUtil.lastItem(RENDERED_GENERATIONS)];
+
 
 		// We can have multiple points near the same area, so use an array
 		var matchedSteps = [];
