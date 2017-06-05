@@ -1368,7 +1368,10 @@ $.fn.evoAnimate = function(props) {
 
 			// Button(s) on the bottom
 			// 1px is border, 31 = 1 brder + 20 font size + 5 padding on top and bottom
+			// Settings
 			drawBoxWithText(ctx, 'Nastavitve', 1, canvasObj.height -31, false)
+			// Mesh
+			drawBoxWithText(ctx, 'Mreža', canvasObj.width - 66, canvasObj.height -31, false)
 
 
 
@@ -1581,13 +1584,17 @@ $.fn.evoAnimate = function(props) {
 				var cw = canvas.width;
 				var ch = canvas.height;
 
-				// If menu is shown, also trigger "Nastavitve" button
-				// Bottom left is step backward
-				if(oX < cw/2 && oY > canvas.height - 30) {
-					settingsShowHide(canvas);
-					return;
+				// If menu is shown, also trigger buttons
+				if(checkMenuShown(canvas)) {
+					if(oX < cw/2 && oY > canvas.height - 30) {
+						settingsShowHide(canvas);
+						return;
+					}
+					if(oX > cw/2 && oY > canvas.height - 30) {
+						drawMesh(canvas);
+						return;
+					}
 				}
-
 				var menuBtnTrigger = false;
 				// Top left corner is play/stop
 				if(oX < cw/2 && oY < ch/2) {
