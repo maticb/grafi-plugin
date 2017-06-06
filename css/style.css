@@ -7,12 +7,32 @@ body,html {
 
 /* Plugin css code */
 .evo-animate-container {
-	position:relative;
+
 }
-.evo-animate-container > canvas {
+.evo-animate-container  .evo-animate-canvas-container > canvas {
 	margin:5px;
 	box-sizing: border-box;
 	border:1px solid black;
 }
 
+.evo-animate-container  .evo-animate-canvas-container {
+	position:relative;
+	display: inline-block;
+}
 
+
+.evo-animate-container  .evo-animate-canvas-container .evo-animate-settings {
+	position: absolute;
+	padding:5px;
+	top:0;
+	left:0;
+	display:none;
+	background-color: white;
+	border: 1px solid black;
+	border-radius: 2px;
+	width:180px;
+}
+
+.evo-animate-container  .evo-animate-canvas-container .evo-animate-settings input {
+	width:50px;
+}

@@ -72,6 +72,7 @@ $.fn.evoAnimate = function(props) {
 		yIndex: 1, // Same for the y axis
 		shadeStartsCounter: [],
 		menuShown: false,
+		settingsShown: false,
 	};
 
 	// Non-static private vars
@@ -142,11 +143,11 @@ $.fn.evoAnimate = function(props) {
 	var TIMELINE_MAX_FITNESS = -999999999;
 
 	// Mesh
-	var MESH_LINE_NUMBERS = 10;
 	var MESH_IS_SHOWN = false;
 
 
 	// Playback settings that can be changed by the user
+	var MESH_LINE_NUMBERS = 10;
 	var JUMP_OVER_GENERATIONS_NUM = 10; // Number of generations to jump over when clicking next generation
 
 
@@ -739,9 +740,16 @@ $.fn.evoAnimate = function(props) {
 		c.xIndex = parseInt(axisIds[0]);
 		c.yIndex = parseInt(axisIds[1]);
 
+		// Div container for canvas
+		c.canvasContainer = $('<div></div>').addClass('evo-animate-canvas-container');
+		container.append(c.canvasContainer);
+
 		// Create a canvas element (background)
 		c.bgCanvas = $('<canvas/>').height(c.height).width(c.width).attr('height', c.height).attr('width', c.width).attr('id', id);
-		container.append(c.bgCanvas );
+
+		$(c.bgCanvas).wrap('<div class="evo-calculator-canvas-inner-container"></div>');
+
+		c.canvasContainer.append(c.bgCanvas);
 		c.bgLayerCtx = c.bgCanvas [0].getContext('2d');
 
 		// Create canvasStack object
@@ -769,6 +777,14 @@ $.fn.evoAnimate = function(props) {
 
 		// Fill shade starts counter array with zeroes
 		c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width + 1, c.height + 1);
+
+		// Create div under canvas for data display
+		c.underContainer = $('<div></div>').addClass('evo-animate-under');
+		c.canvasContainer.append(c.underContainer);
+
+		c.settingsContainer = $('<div></div>').addClass('evo-animate-settings');
+		c.canvasContainer.append(c.settingsContainer);
+
 
 		// Push into array
 		CANVAS_ARR.push(c);
@@ -1553,11 +1569,83 @@ $.fn.evoAnimate = function(props) {
 	/**
 	* Shows or hides settings
 	* @param  object 	canvassObj 	Canvas context object
+	* @param  boolean  	hideOnly 	Flag, defines if we should only try to hide settings, if they are shown
 	*/
-	function settingsShowHide(canvasObj) {
-		// TODO:implement
-		console.log('settings');
+	function settingsShowHide(canvasObj, hideOnly = false) {
+		if(!checkSettingsShown(canvasObj) && !hideOnly) {
+			canvasObj.settingsContainer.css('display', 'block');
+			setSettingsPosition(canvasObj);
+			fillSettingsContainer(canvasObj.settingsContainer);
+			bindSettingsEvents(canvasObj);
+			canvasObj.settingsShown = true;
+		} else {
+			canvasObj.settingsContainer.css('display', 'none');
+			canvasObj.settingsShown = false;
+		}
 	}
+
+	/**
+	* Calculates and sets settings position on given canvas
+	* @param  object 	canvassObj 	Canvas context object
+	*/
+	function setSettingsPosition(canvasObj) {
+		var $container = canvasObj.settingsContainer;
+		//TODO: implement
+	}
+
+
+	/*
+	* Function binds events for editing settings
+	* @param object 	canvasObj 	Canvas context object
+	*/
+	function bindSettingsEvents(canvasObj) {
+		var $container = canvasObj.settingsContainer;
+		var $generationInputField =  $container.find('.settings-generations-jump');
+		var $meshNumberInputField =  $container.find('.settings-mesh-number');
+		var $button = $container.find('.btn-evo-animate-settings-submit');
+
+		$button
+		.off('click')
+		.on('click', function() {
+			var meshLinesNumber = parseInt($meshNumberInputField.val());
+			if(meshLinesNumber > 100)
+				meshLinesNumber = 100;
+			if(meshLinesNumber < 0)
+				meshLinesNumber = 10;
+			var genNumber = parseInt($generationInputField.val());
+			if(genNumber < 0)
+				genNumber = 1;
+			JUMP_OVER_GENERATIONS_NUM = genNumber;
+			MESH_LINE_NUMBERS = meshLinesNumber;
+			settingsShowHide(canvasObj);
+		});
+	}
+
+	/*
+	* Function fills settings container with HTML
+	* @param object 	container 	Jquery container
+	*/
+	function fillSettingsContainer($container) {
+		$container.html(''+
+			'<table>'+
+			'  <tbody>'+
+			'    <tr><td>Št. preskočenih generacij:</td><td><input type="text" class="settings-generations-jump" value="' + JUMP_OVER_GENERATIONS_NUM + '" /></td></tr>'+
+			'    <tr><td>Št. črt v mreži:</td><td><input type="text" class="settings-mesh-number" value="' + MESH_LINE_NUMBERS + '" /></td></tr>'+
+			'    <tr><td></td><td><button class="btn-evo-animate-settings-submit">Shrani</button></td></tr>'+
+			'  </tbody>'+
+			'</table>');
+
+	}
+
+	/*
+	* Function checks if settings are shown on given canvas object
+	* @param object 	canvasObj 	Canvas context object
+	*/
+	function checkSettingsShown(canvasObj) {
+		return true === canvasObj.settingsShown ? true : false;
+	}
+
+
 
 
 	/*
@@ -1576,6 +1664,8 @@ $.fn.evoAnimate = function(props) {
 				var canvas = findCanvasInArr(canvasEl[0]);
 				var oX = e.offsetX;
 				var oY = e.offsetY;
+
+
 
 				// Menu button
 				if( oX < 30 && oY < 30) {
@@ -1599,6 +1689,10 @@ $.fn.evoAnimate = function(props) {
 						return;
 					}
 				}
+
+				// Hide settings when we clicked anywhere the canvas
+				settingsShowHide(canvas, true);
+
 				var menuBtnTrigger = false;
 				// Top left corner is play/stop
 				if(oX < cw/2 && oY < ch/2) {
@@ -1626,8 +1720,9 @@ $.fn.evoAnimate = function(props) {
 				}
 
 				// If we clicked on any controls, also hide menu
-				if(menuBtnTrigger)
+				if(menuBtnTrigger) {
 					menuButtonClicked(canvas, true);
+				}
 			});
 			// Mousemove event for displaying menu button
 			$canvas
