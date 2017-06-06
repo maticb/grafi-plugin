@@ -1586,11 +1586,17 @@ $.fn.evoAnimate = function(props) {
 
 	/**
 	* Calculates and sets settings position on given canvas
+	* Settings popup: 	width:180px; height:94px;
 	* @param  object 	canvassObj 	Canvas context object
 	*/
 	function setSettingsPosition(canvasObj) {
 		var $container = canvasObj.settingsContainer;
-		//TODO: implement
+		var midPointW = canvasObj.width / 2;
+		var midPointH = canvasObj.height / 2;
+		midPointW -= 90;
+		midPointH -= 47;
+		$container.css('left', midPointW);
+		$container.css('top', midPointH);
 	}
 
 
