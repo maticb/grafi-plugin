@@ -76,6 +76,16 @@ $.fn.evoAnimate = function(props) {
 		settingsShown: false,
 	};
 
+	// Under canvas html
+	var UNDER_CONTENT = ''+
+	'<div class="button">'+
+	'  <button>Prikaži legendo</button>'+
+	'</div>'+
+	'<div class="content">'+
+	'Legenda:<br/>'+
+	'<div class="inner"></div>'+
+	'</div>';
+
 	// Non-static private vars
 	// Animation data
 	var ANIMATION_DATA = {}; // Parsed animation data
@@ -782,6 +792,7 @@ $.fn.evoAnimate = function(props) {
 
 		// Create div under canvas for data display
 		c.underContainer = $('<div></div>').addClass('evo-animate-under');
+		c.underContainer.html(UNDER_CONTENT);
 		c.canvasContainer.append(c.underContainer);
 
 		c.settingsContainer = $('<div></div>').addClass('evo-animate-settings');
@@ -1787,7 +1798,18 @@ $.fn.evoAnimate = function(props) {
 			.on('mouseleave',function(e){
 				menuButtonShow(this.getContext('2d'), false);
 				clearAllTimelines();
-			})
+			});
+		});
+
+		$('.evo-animate-canvas-container .evo-animate-under .button button')
+		.off('click')
+		.on('click', function() {
+			$this = $(this);
+			$content = $this.parents('.evo-animate-under').find('.content');
+			if('none' === $content.css('display'))
+				$content.slideDown();
+			else
+				$content.slideUp();
 
 		});
 	}

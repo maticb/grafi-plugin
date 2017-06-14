@@ -18,9 +18,11 @@ body,html {
 .evo-animate-container  .evo-animate-canvas-container {
 	position:relative;
 	display: inline-block;
+	float: left;
 }
 
 
+/* Settings popup */
 .evo-animate-container  .evo-animate-canvas-container .evo-animate-settings {
 	position: absolute;
 	padding:5px;
@@ -36,4 +38,13 @@ body,html {
 
 .evo-animate-container  .evo-animate-canvas-container .evo-animate-settings input {
 	width:50px;
+}
+
+
+/* Under (legend) */
+.evo-animate-container  .evo-animate-under {
+	margin:5px;
+}
+.evo-animate-container  .evo-animate-under .content {
+	display:none;
 }
