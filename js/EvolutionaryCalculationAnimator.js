@@ -20,27 +20,28 @@ Več grafov;
 * - ** RAFPolyfill.js (request animation frame polyfill, if using older browsers) https://gist.github.com/paulirish/1579671
 *
 * Init properties (OBJECT) containing:
-* - source 			string	REQUIRED	URL of the source file, or raw source data, depending on the settings (read below)
+* - source 				string	REQUIRED	URL of the source file, or raw source data, depending on the settings (read below)
 * 			URL SOURCE NOT YET IMPLEMENETED!
 *
-* - sourceType		string 	Optional	Set type of source, defaults to "URL". Possible types: "URL", "STRING"
+* - sourceType			string 	Optional	Set type of source, defaults to "URL". Possible types: "URL", "STRING"
 *
-* - playOnLoad		bool	Optional	Defines if playback should start when plugin is done loading, defaults to true.
+* - playOnLoad			bool	Optional	Defines if playback should start when plugin is done loading, defaults to true.
 *
-* - display			array	Optional	Defines how many (2 per canvas) and which X values to show
+* - display				array	Optional	Defines how many (2 per canvas) and which X values to show
 * 		Shows all combinations of X-es by default e.g.: If the problem has 3 dimensions -> [x1,x2], [x1,x3], [x2,x3]
 *		Can also display fitness: [fit, x1]
 * 		Defined as an array, where the first X is numbered as "1": [1,2]  would display a canvas elements containing a graph, showing [x1,x2]
 *		To show multiple combinations define an array of arrays: [[1,2],[2,3]] -> [x1,x2] and [x2,x3]
 *
-* - canvasSize 		array 	Optional	Defines dimensions of each canvas seperately, or  globally.
+* - canvasSize 			array 	Optional	Defines dimensions of each canvas seperately, or  globally.
 * 		If only an array of 2 integers is set, that will be considered as the dimension for all canvases: [300,300]
 * 		You can also pass an array of arrays (Identical in size to the above "display" array!) that will set dimensions for each canvas seperately
 *
-* - fps 			integer Optional 	Frames per second, defaults to  25
+* - fps 				integer Optional 	Frames per second, defaults to  25
 *
-* - shadingHistory 	boolean Optional 	Display or hide step history with shading, defaults to true
-* - fullPlayback 	boolean Optional 	Defaults to false, if set to true, playback will continue until the end of data
+* - shadingHistory 		boolean Optional 	Display or hide step history with shading, defaults to true
+* - fullPlayback 		boolean Optional 	Defaults to false, if set to true, playback will continue until the end of data
+* - shownGenerations 	integer Optional 	Defaults to 3, defines how many generations before the current one should be shown. 0 means all generations.
 *
 *	Example configuration of plugin properties:
 
@@ -95,6 +96,7 @@ $.fn.evoAnimate = function(props) {
 	var LAST_ADDED_GENERATION = 1; // Id of the last generation added to the rendering
 
 	var FULL_PLAYBACK  = false; // If set to false, play button will only play animation until the end of the generation
+
 	var PLAYBACK_STARTED_GEN = 1; // Stores the generation number on which playback was started
 
 
@@ -137,7 +139,7 @@ $.fn.evoAnimate = function(props) {
 	var TIMELINE_IS_SHOWN = false;
 	var TIMELINE_HEIGHT = 50;
 	var TIMELINE_OFFSET_BOTTOM = 10;
-	var TIMELINE_COLUMN_WIDTH = 5;
+	var TIMELINE_COLUMN_WIDTH = 3;
 	var TIMELINE_COLUMN_COLOR = '#00AA00';
 	var TIMELINE_GENERATION_DIVIDER_COLOR = '#000000';
 	var TIMELINE_MAX_FITNESS = -999999999;
@@ -1497,8 +1499,11 @@ $.fn.evoAnimate = function(props) {
 
 		var firstGen = 0 === SHOWN_GENERATIONS_NUMBER ? 1 : RENDERED_GENERATIONS[0];
 		var startStep = GENERATION_STARTS[firstGen - 1];
-		var lastStep = 0 === SHOWN_GENERATIONS_NUMBER ? ANIMATION_DATA.steps.length :  GENERATION_STARTS[evolutionUtil.lastItem(RENDERED_GENERATIONS)];
 
+		var tmpLastStep = GENERATION_STARTS[evolutionUtil.lastItem(RENDERED_GENERATIONS)];
+		if(undefined === tmpLastStep)
+			tmpLastStep  = ANIMATION_DATA.steps.length;
+		var lastStep = 0 === SHOWN_GENERATIONS_NUMBER ? ANIMATION_DATA.steps.length :  tmpLastStep;
 
 		// We can have multiple points near the same area, so use an array
 		var matchedSteps = [];
@@ -1671,8 +1676,6 @@ $.fn.evoAnimate = function(props) {
 				var oX = e.offsetX;
 				var oY = e.offsetY;
 
-
-
 				// Menu button
 				if( oX < 30 && oY < 30) {
 					menuButtonClicked(canvas);
@@ -1783,6 +1786,7 @@ $.fn.evoAnimate = function(props) {
 			.off('mouseleave')
 			.on('mouseleave',function(e){
 				menuButtonShow(this.getContext('2d'), false);
+				clearAllTimelines();
 			})
 
 		});
@@ -1891,6 +1895,8 @@ $.fn.evoAnimate = function(props) {
 		var playOnLoad = props.hasOwnProperty('playOnLoad') ? props.playOnLoad : true;
 		//  fullPlayback
 		FULL_PLAYBACK = props.hasOwnProperty('fullPlayback') ? props.fullPlayback : false;
+		// Shown generations
+		SHOWN_GENERATIONS_NUMBER  = props.hasOwnProperty('shownGenerations') ? shownGenerations : SHOWN_GENERATIONS_NUMBER;
 		// Function when loading is completed, as data can be loaded from ajax.
 		var loadingCompleted = function() {
 			if(playOnLoad) {
