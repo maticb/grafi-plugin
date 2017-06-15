@@ -142,7 +142,7 @@ $.fn.evoAnimate = function(props) {
 	// We count the number of steps that have hit the same pixel, and add darker shades to pixels that have had more steps on them, to display algorithm search area
 	var USE_SHADING_HISTORY = true;
 	var CANVAS_SHADES_NUM = 10;
-	var CANVAS_SHADES_COLORS = ['#E5E5E5', '#CBCBCB', '#B1B1B1', '#979797', '#7D7D7D', '#636363', '	#494949', '#2F2F2F', '#151515', '#000000']; // Array of CANVAS_SHADES_NUM colors
+	var CANVAS_SHADES_COLORS = ['#E5E5E5', '#CBCBCB', '#B1B1B1', '#979797', '#7D7D7D', '#636363', '#494949', '#2F2F2F', '#151515', '#000000']; // Array of CANVAS_SHADES_NUM colors
 	var CANVAS_SHADES = {}; // Array that stores numbers, at which a certain shade should start
 
 	// Timeliine globals
@@ -205,7 +205,6 @@ $.fn.evoAnimate = function(props) {
 			coords.y = Math.floor(coords.y);
 			array[coords.x][coords.y]++;
 		}
-
 		// Find the cell with the maximum amount of steps on it
 		var max = -1;
 		var min = 9999999;
@@ -215,9 +214,8 @@ $.fn.evoAnimate = function(props) {
 				var cell = row[j];
 				if(cell > max)
 					max = cell;
-
 				//TODO: test this when we get better data!
-				if(cell < min && cell > 5)
+				if(cell < min && cell > 0)
 					min = cell;
 			}
 		}
@@ -225,6 +223,7 @@ $.fn.evoAnimate = function(props) {
 		var shadeStarts = [];
 		for(var i = 0; i < numOfShades; i++)
 			shadeStarts.push(0);
+
 		// If maximum hits is less than number of shades simply put them in order from front to back
 		if(max < numOfShades) {
 			var iterator = numOfShades - 1;
@@ -235,21 +234,51 @@ $.fn.evoAnimate = function(props) {
 			// Else calculate step (divison) and fill the array by adding it
 			var divisionOriginal =  max / numOfShades;
 			var division = divisionOriginal / numOfShades;
-			if(division > 10)
+			divisionOriginal = Math.round(divisionOriginal);
+			if(division > 5)
 				growth = true;
 			var start = min;
 			for(var i in shadeStarts) {
-				shadeStarts[i] = Math.round(start);
-				if(growth)
-					start += (division * (parseInt(i)));
-				else
+				if(growth){
+					start = (division * parseInt(i + 1) );
+					shadeStarts[i] = Math.round(start);
+				} else {
+					shadeStarts[i] = Math.round(start);
 					start += divisionOriginal;
+				}
 			}
 		}
 		CANVAS_SHADES[canvasObj.id] = shadeStarts;
+		console.log("MAX:" + max);
 		console.log(CANVAS_SHADES[canvasObj.id]); //TEMP debug
 	}
 
+	/*
+	* Calculates number of steps that have hit each pixel, to calculate proper shading values (for each canvas seperately)
+	* @param object 	canvasObj 	Canvas object
+	*/
+	function createLegendUnderCanvas(canvasObj) {
+		var $container = canvasObj.underContainer;
+		var currentCanvasShades = CANVAS_SHADES[canvasObj.id];
+		var html = '';
+		for(var i in currentCanvasShades) {
+			i = parseInt(i);
+			var currentShade = currentCanvasShades[i];
+			var prevShade = i - 1 >= 0 ? currentCanvasShades[i - 1] : undefined;
+			// Do not show legend for shades with the same value
+			if(0 === currentShade)
+				continue;
+			var color = CANVAS_SHADES_COLORS[i - 1]; //TODO
+			if(i === currentCanvasShades.length - 1)
+				html += ' < <div class="color-box" style="background-color:' + color + ';"></div> < ' + currentShade + ' < <div class="color-box" style="background-color:' + color + ';"></div>';
+			else if(i !== 0 && 0 !== prevShade)
+				html += ' < <div class="color-box" style="background-color:' + color + ';"></div> < ' + currentShade;
+			else
+				html += currentShade;
+		}
+
+		$container.find('.content').html(html);
+	}
 
 	/*
 	* Increments shade starts counter array on the given position
@@ -284,13 +313,16 @@ $.fn.evoAnimate = function(props) {
 		var counterValue = canvasObj.shadeStartsCounter[x][y];
 		var shadeStarts = CANVAS_SHADES[canvasObj.id];
 		var prevShadeValue = shadeStarts[0];
-		if(counterValue > shadeStarts[0])
+		if(counterValue > shadeStarts[0]) {
 			for(var i = 1; i < shadeStarts.length; i++) {
 				var shadeValue = shadeStarts[i];
 				if(counterValue > prevShadeValue && counterValue  <= shadeValue) {
 					return CANVAS_SHADES_COLORS[i - 1];
 				}
 			}
+		}
+		if(counterValue > evolutionUtil.lastItem(shadeStarts))
+			return evolutionUtil.lastItem(CANVAS_SHADES_COLORS);
 		// This should never happen
 		return CANVAS_BG_COLOR;
 	}
@@ -794,6 +826,8 @@ $.fn.evoAnimate = function(props) {
 		c.underContainer = $('<div></div>').addClass('evo-animate-under');
 		c.underContainer.html(UNDER_CONTENT);
 		c.canvasContainer.append(c.underContainer);
+		c.underContainer.css('width', c.width);
+		c.underContainer.css('height', c.height);
 
 		c.settingsContainer = $('<div></div>').addClass('evo-animate-settings');
 		c.canvasContainer.append(c.settingsContainer);
@@ -978,6 +1012,7 @@ $.fn.evoAnimate = function(props) {
 			var newCanvas = spawnCanvas(canvasId++, CANVAS_X_SETTING[i], currentSizeArr);
 			// Calculate shades for this canvas
 			calculateShades(ANIMATION_DATA, newCanvas);
+			createLegendUnderCanvas(newCanvas);
 		}
 		// Put the first generation into the proper array
 		RENDERED_GENERATIONS = [1];

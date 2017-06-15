@@ -48,3 +48,9 @@ body,html {
 .evo-animate-container  .evo-animate-under .content {
 	display:none;
 }
+
+.evo-animate-container .evo-animate-under .color-box {
+	display:inline-block;
+	width:30px;
+	height:20px;
+}
