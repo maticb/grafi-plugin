@@ -1297,7 +1297,7 @@ $.fn.evoAnimate = function(props) {
 	*/
 	function clearTimeline(canvasObj) {
 		var ctx = canvasObj.infoLayerCtx;
-		ctx.clearRect(0, canvasObj.height - TIMELINE_HEIGHT - TIMELINE_OFFSET_BOTTOM, canvasObj.width, TIMELINE_HEIGHT);
+		ctx.clearRect(0, canvasObj.height - TIMELINE_HEIGHT - TIMELINE_OFFSET_BOTTOM, canvasObj.width, TIMELINE_HEIGHT + TIMELINE_OFFSET_BOTTOM);
 	}
 	/*
 	* Clears all timelines
@@ -1596,8 +1596,12 @@ $.fn.evoAnimate = function(props) {
 		var lineheight = 15;
 		var lines = msg.split('\n');
 		ctx.fillStyle = '#FF0000';
-		for (var i = 0; i < lines.length; i++)
+		var maxLines = (canvasObj.height - TIMELINE_HEIGHT - TIMELINE_OFFSET_BOTTOM) / lineheight - 1;
+		for (var i = 0; i < lines.length; i++) {
+			if(i >= maxLines)
+				break;
 			ctx.fillText(lines[i], x, y + (i * lineheight));
+		}
 	}
 
  	/*
