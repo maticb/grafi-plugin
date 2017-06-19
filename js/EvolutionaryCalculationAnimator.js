@@ -1360,14 +1360,11 @@ $.fn.evoAnimate = function(props) {
 		if(show === MENU_BUTTON_SHOWN)
 			return;
 		if(true === show) {
-			ctx.fillStyle = '#000000';
-			ctx.fillRect(0,0,30,30);
-			ctx.fillStyle = '#FFFFFF';
-			ctx.font = "10px Arial";
-			ctx.fillText("Menu",3,18);
+			var img = container.find('.img-btn-menu')[0];
+			ctx.drawImage(img, 1, 1, 30, 30);
 			MENU_BUTTON_SHOWN = true;
 		} else {
-			ctx.clearRect(0,0,30,30);
+			ctx.clearRect(0,0,31,31);
 			MENU_BUTTON_SHOWN = false;
 		}
 	}
@@ -1410,37 +1407,33 @@ $.fn.evoAnimate = function(props) {
 			var midPointH = ch / 2;
 
 			// Only draw 2 rectangles to show grid for menu
-			ctx.strokeStyle = '#FF0000';
-			ctx.strokeRect(midPointW, 0, cw, midPointH);
-			ctx.strokeRect(0, midPointH, midPointW, ch);
+			//ctx.strokeStyle = '#FF0000';
+			//ctx.strokeRect(midPointW, 0, cw, midPointH);
+			//ctx.strokeRect(0, midPointH, midPointW, ch);
 
 			// Top left corner is play/stop
 			var coords = findCenterOfCorner(canvasObj, 'tl');
-			drawBoxWithText(ctx, 'Predvajaj', coords.xMid, coords.yMid);
+			drawImageOnCanvas(ctx, 'img-btn-predvajaj', coords.xMid, coords.yMid);
 
 			// Top right corner is generation step forward
 			coords = findCenterOfCorner(canvasObj, 'tr');
-			drawBoxWithText(ctx, 'Korak', coords.xMid, coords.yMid - 10);
-			drawBoxWithText(ctx, 'generacij', coords.xMid, coords.yMid + 10);
+			drawImageOnCanvas(ctx, 'img-btn-korak-gen', coords.xMid, coords.yMid);
 
 			// Bottom left is step backward
 			coords = findCenterOfCorner(canvasObj, 'bl');
-			drawBoxWithText(ctx, 'Korak', coords.xMid, coords.yMid - 10);
-			drawBoxWithText(ctx, 'nazaj', coords.xMid, coords.yMid + 10);
+			drawImageOnCanvas(ctx, 'img-btn-korak-nazaj', coords.xMid, coords.yMid);
 
 
 			// Bottom right is step forward
 			coords = findCenterOfCorner(canvasObj, 'br');
-			drawBoxWithText(ctx, 'Korak', coords.xMid, coords.yMid - 10);
-			drawBoxWithText(ctx, 'naprej', coords.xMid, coords.yMid + 10);
-
+			drawImageOnCanvas(ctx, 'img-btn-korak-naprej', coords.xMid, coords.yMid);
 
 			// Button(s) on the bottom
 			// 1px is border, 31 = 1 brder + 20 font size + 5 padding on top and bottom
 			// Settings
-			drawBoxWithText(ctx, 'Nastavitve', 1, canvasObj.height -31, false)
+			drawImageOnCanvas(ctx, 'img-btn-nastavitve', 2, canvasObj.height -31, false);
 			// Mesh
-			drawBoxWithText(ctx, 'Mreža', canvasObj.width - 66, canvasObj.height -31, false)
+			drawImageOnCanvas(ctx, 'img-btn-mreza', canvasObj.width - 63, canvasObj.height -31, false);
 
 
 
@@ -1504,32 +1497,21 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
-	* Function that draws a given
+	* Function that draws an image on the given coordinates
 	* @param object 	ctx 		Canvas context object
-	* @param string 	text 		Text to draw inside box
+	* @param string 	imgClass 	Image class name
 	* @param int/float 	x 			X coordinate where the middle of the text shall be
 	* @param int/float 	y 			Y coordinate where the middle of the text shall be
 	* @param boolean 	center		Indicates whether the given coordinates should be the center of the box
-	* @param string 	textColor 	Text color, defaults to black
-	* @param string 	bgColor 	Background color, defaults to grey(-ish)
-	* @param int 		fontSize 	Font size, defaults to 20 pixels
-	* @param int 		padding 	Text padding within the box, on all sides
 	*/
-	function drawBoxWithText(ctx, text, x, y, center = true, textColor = '#000000', bgColor = '#999999', fontSize = 20, padding = 5) {
+	function drawImageOnCanvas(ctx, imgClass, x, y, center = true) {
+		var img = container.find('.' + imgClass)[0];
 
-		ctx.font = parseInt(fontSize) + 'px Arial';
-		padding = parseInt(padding);
-		var measurement = ctx.measureText(text);
 		if(true === center) {
-			x = x - measurement.width  / 2;
-			y = y - fontSize / 2;
+			x = x - parseInt(img.naturalWidth)  / 2;
+			y = y - parseInt(img.naturalHeight) / 2;
 		}
-
-		ctx.fillStyle = bgColor;
-		ctx.fillRect(x, y, measurement.width + padding * 2, fontSize + padding * 2);
-
-		ctx.fillStyle = textColor;
-		ctx.fillText(text, x + padding, y + fontSize);
+		ctx.drawImage(img, x, y);
 	}
 
 	/*
@@ -1858,6 +1840,17 @@ $.fn.evoAnimate = function(props) {
 		container.append('<div/>');
 		container = container.find('div:first-child')
 		container.addClass('evo-animate-container');
+		// Add images that are needed inside canvas
+		container.append('<div class="images"></div>');
+		imgContainer = container.find('.images');
+		imgContainer.append('<img class="img-btn-menu" src="css/imgs/btn-menu.jpg" alt="Menu" />');
+		imgContainer.append('<img class="img-btn-predvajaj" src="css/imgs/btn-predvajaj.jpg" alt="Predvajaj" />');
+		imgContainer.append('<img class="img-btn-korak-gen" src="css/imgs/btn-korak-gen.jpg" alt="Korak generacij" />');
+		imgContainer.append('<img class="img-btn-korak-nazaj" src="css/imgs/btn-korak-nazaj.jpg" alt="Korak nazaj" />');
+		imgContainer.append('<img class="img-btn-korak-naprej" src="css/imgs/btn-korak-naprej.jpg" alt="Korak naprej" />');
+		imgContainer.append('<img class="img-btn-nastavitve" src="css/imgs/btn-nastavitve.jpg" alt="Nastavitve" />');
+		imgContainer.append('<img class="img-btn-mreza" src="css/imgs/btn-mreza.jpg" alt="Mreža" />');
+
 		// Source
 		if(!props.hasOwnProperty('source')) {
 			// TODO: friendlier error messages

@@ -54,3 +54,7 @@ body,html {
 	width:30px;
 	height:20px;
 }
+
+.evo-animate-container .images {
+	display:none;
+}

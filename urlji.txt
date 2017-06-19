@@ -8,3 +8,5 @@ http://stackoverflow.com/questions/19764018/controlling-fps-with-requestanimatio
 http://www.arc.id.au/CanvasLayers.html 	14.3.2017 -- poglej če si uporabu!
 
 http://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript --15.3.2017
+
+http://freepsdfiles.net/buttons/free-colorful-buttons -- 19.6.2017 (http://freepsdfiles.net/terms-of-use)
