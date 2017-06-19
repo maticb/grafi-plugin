@@ -205,6 +205,7 @@ $.fn.evoAnimate = function(props) {
 			coords.y = Math.floor(coords.y);
 			array[coords.x][coords.y]++;
 		}
+
 		// Find the cell with the maximum amount of steps on it
 		var max = -1;
 		var min = 9999999;
@@ -235,7 +236,7 @@ $.fn.evoAnimate = function(props) {
 			var divisionOriginal =  max / numOfShades;
 			var division = divisionOriginal / numOfShades;
 			divisionOriginal = Math.round(divisionOriginal);
-			if(division > 5)
+			if(division > 8)
 				growth = true;
 			var start = min;
 			for(var i in shadeStarts) {
@@ -1267,6 +1268,7 @@ $.fn.evoAnimate = function(props) {
 			// Transform fitness to a smaller scale
 			var columnHeight = (fitness / TIMELINE_MAX_FITNESS) * TIMELINE_HEIGHT;
 			var columnOffset = TIMELINE_HEIGHT  - columnHeight;
+			columnHeight = columnHeight < 2 ? 2 : columnHeight;// Set column height to be at least 2 pixels
 			renderColumn(ctx, startX, startY, columnHeight, columnOffset);
 			// Add line when new generation starts
 			if(prevGen > 0 ) {

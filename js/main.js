@@ -33,10 +33,14 @@ $(document).ready(function(){
 		source: exampleInput1,
 		sourceType: 'STRING',
 		//source:'http://localhost/diploma/sphere.php',
-		//sourceType: 'URL',
+		source:'http://localhost/diploma/jade_sphere.php',
+		//source:'http://localhost/diploma/jade_Schwefel_226.php',
+		//source:'http://localhost/diploma/rastrigin.php',
+		sourceType: 'URL',
 		display: [[1,2],[4,5],[5,6],[6,7]],
 		canvasSize: [300,400],
 		fps:60,
+		fullPlayback:true,
 	});
 });
 
