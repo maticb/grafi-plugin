@@ -41,6 +41,7 @@ $(document).ready(function(){
 		canvasSize: [300,400],
 		fps:60,
 		fullPlayback:true,
+		meshInitialDisplay: true,
 	});
 });
 

@@ -42,6 +42,8 @@ Več grafov;
 * - shadingHistory 		boolean Optional 	Display or hide step history with shading, defaults to true
 * - fullPlayback 		boolean Optional 	Defaults to false, if set to true, playback will continue until the end of data
 * - shownGenerations 	integer Optional 	Defaults to 3, defines how many generations before the current one should be shown. 0 means all generations.
+* - meshColor 			string 	Optional 	Defaults to #e5e5e5, defines color of lines in the mesh on the canvas
+* - meshInitialDisplay 	boolean Optional 	Defaults to false, turns on mesh on all canvases upon load if set to true
 *
 *	Example configuration of plugin properties:
 
@@ -73,6 +75,7 @@ $.fn.evoAnimate = function(props) {
 		yIndex: 1, // Same for the y axis
 		shadeStartsCounter: [],
 		menuShown: false,
+		meshShown: false,
 		settingsShown: false,
 	};
 
@@ -155,11 +158,13 @@ $.fn.evoAnimate = function(props) {
 	var TIMELINE_MAX_FITNESS = -999999999;
 
 	// Mesh
-	var MESH_IS_SHOWN = false;
+	var MESH_COLOR = '#e5e5e5';
+	var MESH_INITIAL_DISPLAY = false;
 
 
 	// Playback settings that can be changed by the user
 	var MESH_LINE_NUMBERS = 10;
+
 	var JUMP_OVER_GENERATIONS_NUM = 10; // Number of generations to jump over when clicking next generation
 
 
@@ -1011,6 +1016,10 @@ $.fn.evoAnimate = function(props) {
 			var currentSizeArr = oneSize ? CANVAS_SIZE_SETTING[0] : CANVAS_SIZE_SETTING[i];
 			// Spawn canvas for every 2 dimensions
 			var newCanvas = spawnCanvas(canvasId++, CANVAS_X_SETTING[i], currentSizeArr);
+			// Draw mesh if it's set for inital display
+			if(true === MESH_INITIAL_DISPLAY) {
+				drawMesh(newCanvas);
+			}
 			// Calculate shades for this canvas
 			calculateShades(ANIMATION_DATA, newCanvas);
 			createLegendUnderCanvas(newCanvas);
@@ -1307,9 +1316,9 @@ $.fn.evoAnimate = function(props) {
 	function drawMesh(canvasObj) {
 		var ctx = canvasObj.meshLayerCtx;
 
-		if(checkMeshShown()) {
+		if(checkMeshShown(canvasObj)) {
 			ctx.clearRect(0, 0, canvasObj.width, canvasObj.height);
-			MESH_IS_SHOWN = false;
+			canvasObj.meshShown = false;
 			return;
 		}
 		// Subtract 1, which is the left/up side border
@@ -1320,12 +1329,12 @@ $.fn.evoAnimate = function(props) {
 		var y = lineMarginY;
 		// We loop for 1 less, because 1 is a border (right/bottom)
 		for(var i = 0; i < MESH_LINE_NUMBERS - 1; i++) {
-			drawLine(ctx, x, 0, x, canvasObj.height, '#FF0000');
-			drawLine(ctx, 0, y, canvasObj.width, y, '#FF0000');
+			drawLine(ctx, x, 0, x, canvasObj.height, MESH_COLOR);
+			drawLine(ctx, 0, y, canvasObj.width, y, MESH_COLOR);
 			x += lineMarginX;
 			y += lineMarginY;
 		}
-		MESH_IS_SHOWN = true;
+		canvasObj.meshShown = true;
 	}
 	/**
 	* Function draws a line from point to point
@@ -1346,9 +1355,10 @@ $.fn.evoAnimate = function(props) {
 
 	/*
 	* Checks if mesh is shown
+	* @param object 	canvasObj 	Canvas object to draw menu on
 	*/
-	function checkMeshShown() {
-		return true === MESH_IS_SHOWN ? true : false;
+	function checkMeshShown(canvasObj) {
+		return true === canvasObj.meshShown ? true : false;
 	}
 
 	/*
@@ -1948,7 +1958,11 @@ $.fn.evoAnimate = function(props) {
 		//  fullPlayback
 		FULL_PLAYBACK = props.hasOwnProperty('fullPlayback') ? props.fullPlayback : false;
 		// Shown generations
-		SHOWN_GENERATIONS_NUMBER  = props.hasOwnProperty('shownGenerations') ? shownGenerations : SHOWN_GENERATIONS_NUMBER;
+		SHOWN_GENERATIONS_NUMBER  = props.hasOwnProperty('shownGenerations') ? props.shownGenerations : SHOWN_GENERATIONS_NUMBER;
+		//MESH COLOR
+		MESH_COLOR  = props.hasOwnProperty('meshColor') ? props.meshColor : MESH_COLOR;
+		// meshInitialDisplay
+		MESH_INITIAL_DISPLAY = props.hasOwnProperty('meshInitialDisplay') ? props.meshInitialDisplay : MESH_INITIAL_DISPLAY;
 		// Function when loading is completed, as data can be loaded from ajax.
 		var loadingCompleted = function() {
 			if(playOnLoad) {
