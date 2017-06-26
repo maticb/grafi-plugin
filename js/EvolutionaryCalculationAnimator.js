@@ -86,8 +86,10 @@ $.fn.evoAnimate = function(props) {
 	'  <button>Info</button>'+
 	'</div>'+
 	'<div class="content">'+
-	'Legenda:<br/>'+
-	'<div class="inner"></div>'+
+	'Algorithm and problem parameters:<br/>'+
+	'<div class="alg-params"></div>'+
+	'Legend:<br/>'+
+	'<div class="shades-legend"></div>'+
 	'</div>';
 
 	// Non-static private vars
@@ -262,8 +264,8 @@ $.fn.evoAnimate = function(props) {
 			var start = min;
 			for(var i in shadeStarts) {
 				if(growth){
-					start = (division * parseInt(i + 1) );
 					shadeStarts[i] = Math.round(start);
+					start = (division * parseInt(i + 1) );
 				} else {
 					shadeStarts[i] = Math.round(start);
 					start += divisionOriginal;
@@ -299,7 +301,37 @@ $.fn.evoAnimate = function(props) {
 				html += currentShade;
 		}
 
-		$container.find('.content').html(html);
+		$container.find('.content .shades-legend').html(html);
+	}
+
+	function fillInfoTab(canvasObj) {
+		var $container = canvasObj.underContainer;
+		var d = ANIMATION_DATA;
+		var html = '' +
+		d.algId + ': ' + d.algName + '<br/>' +
+		'Dimensions: ' + d.problemDim + '<br/>';
+		// Algorithm params
+		for(var i = 0; i < d.algParams.length; i++){
+			if(i + 1 !== d.algParams.length)
+				html += d.algParams + ', ';
+			else
+				html += d.algParams;
+		}
+		if(d.algParams.length)
+			html += '<br/>';
+
+		html += d.problemId + ': ' + d.problemName + '<br/>';
+		// Problem params
+		for(var i = 0; i < d.problemParams.length; i++){
+			if(i + 1 !== d.problemParams.length)
+				html += d.problemParams + ', ';
+			else
+				html += d.problemParams;
+		}
+		if(d.problemParams.length)
+			html += '<br/>';
+
+		$container.find('.content .alg-params').html(html);
 	}
 
 	/*
@@ -455,7 +487,7 @@ $.fn.evoAnimate = function(props) {
 	function parseArgs(obj, arg, argNum) {
 		switch(argNum){
 			case 0: { // algID
-				obj.algId = parseInt(arg);
+				obj.algId = arg;
 				break;
 			}
 			case 1: { // algName
@@ -467,7 +499,7 @@ $.fn.evoAnimate = function(props) {
 				break;
 			}
 			case 3: { // problemID
-				obj.problemId = parseInt(arg);
+				obj.problemId = arg;
 				break;
 			}
 			case 4: { // problemName
@@ -1039,6 +1071,7 @@ $.fn.evoAnimate = function(props) {
 			// Calculate shades for this canvas
 			calculateShades(ANIMATION_DATA, newCanvas);
 			createLegendUnderCanvas(newCanvas);
+			fillInfoTab(newCanvas);
 		}
 		// Put the first generation into the proper array
 		RENDERED_GENERATIONS = [1];
@@ -1440,31 +1473,32 @@ $.fn.evoAnimate = function(props) {
 
 			// Top left corner is play/stop
 			var coords = findCenterOfCorner(canvasObj, 'tl');
-			drawImageOnCanvas(ctx, 'img-btn-predvajaj', coords.xMid, coords.yMid);
+			drawImageOnCanvas(ctx, 'img-btn-play', coords.xMid, coords.yMid);
 
 			// Top right corner is generation step forward
 			coords = findCenterOfCorner(canvasObj, 'tr');
-			drawImageOnCanvas(ctx, 'img-btn-korak-gen', coords.xMid, coords.yMid);
+			drawImageOnCanvas(ctx, 'img-btn-step-gen', coords.xMid, coords.yMid);
 
 			// Bottom left is step backward
 			coords = findCenterOfCorner(canvasObj, 'bl');
-			drawImageOnCanvas(ctx, 'img-btn-korak-nazaj', coords.xMid, coords.yMid);
+			drawImageOnCanvas(ctx, 'img-btn-step-back', coords.xMid, coords.yMid);
 
 
 			// Bottom right is step forward
 			coords = findCenterOfCorner(canvasObj, 'br');
-			drawImageOnCanvas(ctx, 'img-btn-korak-naprej', coords.xMid, coords.yMid);
+			drawImageOnCanvas(ctx, 'img-btn-step-forward', coords.xMid, coords.yMid);
 
 			// Button(s) on the bottom
 			// 1px is border, 31 = 1 brder + 20 font size + 5 padding on top and bottom
 			// Settings
-			drawImageOnCanvas(ctx, 'img-btn-nastavitve', 2, canvasObj.height -31, false);
+			drawImageOnCanvas(ctx, 'img-btn-settings', 2, canvasObj.height -31, false);
 			// Mesh
-			drawImageOnCanvas(ctx, 'img-btn-mreza', canvasObj.width - 63, canvasObj.height -31, false);
+			drawImageOnCanvas(ctx, 'img-btn-mesh', canvasObj.width - 63, canvasObj.height -31, false);
 
 
 
 		} else {
+			settingsShowHide(canvasObj, true);
 			ctx.clearRect(0, 0, cw, ch);
 		}
 	}
@@ -1660,7 +1694,7 @@ $.fn.evoAnimate = function(props) {
 		var midPointW = canvasObj.width / 2;
 		var midPointH = canvasObj.height / 2;
 		midPointW -= 90;
-		midPointH -= 47;
+		midPointH -= 52;
 		$container.css('left', midPointW);
 		$container.css('top', midPointH);
 	}
@@ -1701,9 +1735,9 @@ $.fn.evoAnimate = function(props) {
 		$container.html(''+
 			'<table>'+
 			'  <tbody>'+
-			'    <tr><td>Št. preskočenih generacij:</td><td><input type="text" class="settings-generations-jump" value="' + JUMP_OVER_GENERATIONS_NUM + '" /></td></tr>'+
-			'    <tr><td>Št. črt v mreži:</td><td><input type="text" class="settings-mesh-number" value="' + MESH_LINE_NUMBERS + '" /></td></tr>'+
-			'    <tr><td></td><td><button class="btn-evo-animate-settings-submit">Shrani</button></td></tr>'+
+			'    <tr><td>Iterations to jump:</td><td><input type="text" class="settings-generations-jump" value="' + JUMP_OVER_GENERATIONS_NUM + '" /></td></tr>'+
+			'    <tr><td>Mesh lines number:</td><td><input type="text" class="settings-mesh-number" value="' + MESH_LINE_NUMBERS + '" /></td></tr>'+
+			'    <tr><td></td><td><button class="btn-evo-animate-settings-submit">Save</button></td></tr>'+
 			'  </tbody>'+
 			'</table>');
 
@@ -1716,8 +1750,6 @@ $.fn.evoAnimate = function(props) {
 	function checkSettingsShown(canvasObj) {
 		return true === canvasObj.settingsShown ? true : false;
 	}
-
-
 
 
 	/*
@@ -1831,7 +1863,7 @@ $.fn.evoAnimate = function(props) {
 
 				// Display info about points
 				var clickedPoints = findPointsOnClick(oX, oY, canvasObj);
-				var msg = 'Podatki o točki/točkah: \n';
+				var msg = 'Point information: \n';
 				for(var i in clickedPoints) {
 					var p = clickedPoints[i];
 					msg += 'Id: ' + p.id + ', Fitness: ' + p.fitness.toFixed(3) + ', Generation: ' + p.generation + '\n' ;
@@ -1875,12 +1907,12 @@ $.fn.evoAnimate = function(props) {
 		container.append('<div class="images"></div>');
 		imgContainer = container.find('.images');
 		imgContainer.append('<img class="img-btn-menu" src="css/imgs/btn-menu.jpg" alt="Menu" />');
-		imgContainer.append('<img class="img-btn-predvajaj" src="css/imgs/btn-predvajaj.jpg" alt="Predvajaj" />');
-		imgContainer.append('<img class="img-btn-korak-gen" src="css/imgs/btn-korak-gen.jpg" alt="Korak generacij" />');
-		imgContainer.append('<img class="img-btn-korak-nazaj" src="css/imgs/btn-korak-nazaj.jpg" alt="Korak nazaj" />');
-		imgContainer.append('<img class="img-btn-korak-naprej" src="css/imgs/btn-korak-naprej.jpg" alt="Korak naprej" />');
-		imgContainer.append('<img class="img-btn-nastavitve" src="css/imgs/btn-nastavitve.jpg" alt="Nastavitve" />');
-		imgContainer.append('<img class="img-btn-mreza" src="css/imgs/btn-mreza.jpg" alt="Mreža" />');
+		imgContainer.append('<img class="img-btn-play" src="css/imgs/btn-predvajaj.jpg" alt="Predvajaj" />');
+		imgContainer.append('<img class="img-btn-step-gen" src="css/imgs/btn-korak-gen.jpg" alt="Korak generacij" />');
+		imgContainer.append('<img class="img-btn-step-back" src="css/imgs/btn-korak-nazaj.jpg" alt="Korak nazaj" />');
+		imgContainer.append('<img class="img-btn-step-forward" src="css/imgs/btn-korak-naprej.jpg" alt="Korak naprej" />');
+		imgContainer.append('<img class="img-btn-settings" src="css/imgs/btn-nastavitve.jpg" alt="Nastavitve" />');
+		imgContainer.append('<img class="img-btn-mesh" src="css/imgs/btn-mreza.jpg" alt="Mreža" />');
 
 		// Source
 		if(!props.hasOwnProperty('source')) {
