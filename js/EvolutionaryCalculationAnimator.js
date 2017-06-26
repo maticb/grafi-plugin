@@ -1821,7 +1821,7 @@ $.fn.evoAnimate = function(props) {
 				if(oY > timelineTop && oY < timelineBottom) {
 					if(!checkTimelineShown()) {
 						TIMELINE_IS_SHOWN = true;
-						renderTimeline(canvasObj);
+						//renderTimeline(canvasObj);
 					}
 				} else if(checkTimelineShown()) {
 					clearAllTimelines();
