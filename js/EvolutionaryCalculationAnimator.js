@@ -157,6 +157,8 @@ $.fn.evoAnimate = function(props) {
 	var TIMELINE_COLUMN_COLOR = '#00AA00';
 	var TIMELINE_GENERATION_DIVIDER_COLOR = '#000000';
 	var TIMELINE_MAX_FITNESS = -999999999;
+	var TIMELINE_MIN_FITNESS = 999999999;
+	var TIMELINE_FITNESS_SPAN = 0;
 
 	// Mesh
 	var MESH_COLOR = '#e5e5e5';
@@ -170,7 +172,7 @@ $.fn.evoAnimate = function(props) {
 
 
 	/*
-	* Set problem's range, for proper scaling on the canvas
+	* Set problem's range, for proper scaling on the canvas, also set some timeline variables
 	* @param object data 	Object with algorithm data
 	*/
 	function setProblemRange(data) {
@@ -186,10 +188,23 @@ $.fn.evoAnimate = function(props) {
 			}
 
 			TIMELINE_MAX_FITNESS = TIMELINE_MAX_FITNESS < step.fitness ? step.fitness : TIMELINE_MAX_FITNESS;
+			TIMELINE_MIN_FITNESS = TIMELINE_MAX_FITNESS > step.fitness ? step.fitness : TIMELINE_MIN_FITNESS;
 		}
+
+		// Set timeline fitness span and converted fitness
+		TIMELINE_FITNESS_SPAN = TIMELINE_MIN_FITNESS < 0 ? TIMELINE_MIN_FITNESS * -1 + TIMELINE_MAX_FITNESS : TIMELINE_MAX_FITNESS;
+		for(var i in data.steps){
+			var step = data.steps[i];
+			if(TIMELINE_MIN_FITNESS < 0)
+				step.actualFitness = step.fitness + (TIMELINE_MIN_FITNESS * -1);
+			else
+				step.actualFitness = step.fitness;
+		}
+
 		data.problemRange = (max - min);
 		data.problemLowestNum = min;
 	}
+
 	/*
 	* Calculates number of steps that have hit each pixel, to calculate proper shading values (for each canvas seperately)
 	* @param object 	data 		Object with algorithm data
@@ -244,7 +259,6 @@ $.fn.evoAnimate = function(props) {
 			divisionOriginal = Math.round(divisionOriginal);
 			if(division > 8)
 				growth = true;
-			growth = false;
 			var start = min;
 			for(var i in shadeStarts) {
 				if(growth){
@@ -257,7 +271,7 @@ $.fn.evoAnimate = function(props) {
 			}
 		}
 		CANVAS_SHADES[canvasObj.id] = shadeStarts;
-		console.log("MAX:" + max);
+		console.log("MAX:" + max); //TEMP debug
 		console.log(CANVAS_SHADES[canvasObj.id]); //TEMP debug
 	}
 
@@ -1275,9 +1289,9 @@ $.fn.evoAnimate = function(props) {
 
 		for(var i = start; i < end; i++) {
 			var stepData = ANIMATION_DATA.steps[i];
-			var fitness = stepData.fitness;
+			var fitness = stepData.actualFitness;
 			// Transform fitness to a smaller scale
-			var columnHeight = (fitness / TIMELINE_MAX_FITNESS) * TIMELINE_HEIGHT;
+			var columnHeight = (fitness / TIMELINE_FITNESS_SPAN) * TIMELINE_HEIGHT;
 			var columnOffset = TIMELINE_HEIGHT  - columnHeight;
 			columnHeight = columnHeight < 2 ? 2 : columnHeight;// Set column height to be at least 2 pixels
 			renderColumn(ctx, startX, startY, columnHeight, columnOffset);
