@@ -44,6 +44,7 @@ Več grafov;
 * - shownGenerations 	integer Optional 	Defaults to 3, defines how many generations before the current one should be shown. 0 means all generations.
 * - meshColor 			string 	Optional 	Defaults to #e5e5e5, defines color of lines in the mesh on the canvas
 * - meshInitialDisplay 	boolean Optional 	Defaults to false, turns on mesh on all canvases upon load if set to true
+* - showPreviousLines 	boolean Optional 	Defaults to true, displays lines for steps before the last one
 *
 *	Example configuration of plugin properties:
 
@@ -79,18 +80,6 @@ $.fn.evoAnimate = function(props) {
 		meshShown: false,
 		settingsShown: false,
 	};
-
-	// Under canvas html
-	var UNDER_CONTENT = ''+
-	'<div class="button">'+
-	'  <button>Info</button>'+
-	'</div>'+
-	'<div class="content">'+
-	'Algorithm and problem parameters:<br/>'+
-	'<div class="alg-params"></div>'+
-	'Legend:<br/>'+
-	'<div class="shades-legend"></div>'+
-	'</div>';
 
 	// Non-static private vars
 	// Animation data
@@ -139,6 +128,7 @@ $.fn.evoAnimate = function(props) {
 	// Line color
 	var LINE_CURRENT_COLOR = '#000000';
 	var LINE_PREVIOUS_COLOR = '#999999';
+	var SHOW_PREVIOUS_LINES = true;
 
 
 	// Menu layer globals
@@ -171,6 +161,24 @@ $.fn.evoAnimate = function(props) {
 	var MESH_LINE_NUMBERS = 10;
 
 	var JUMP_OVER_GENERATIONS_NUM = 10; // Number of generations to jump over when clicking next generation
+
+	// Under canvas html
+	var UNDER_CONTENT = ''+
+	'<div class="button">'+
+	'  <button>Info</button>'+
+	'</div>'+
+	'<div class="content">'+
+	'Algorithm and problem parameters:<br/>'+
+	'	<div class="alg-params"></div>'+
+	'Legend:<br/>'+
+	'	<div class="shades-legend"></div>'+
+	'	<div>' +
+	'	Point colors:<br/>' +
+	'  	<div class="color-box" style="background-color:' + POINT_CURRENT_COLOR + ';"></div> - Current generation <br/>' +
+	'  	<div class="color-box" style="background-color:' + POINT_PREVIOUS_GEN_COLOR + ';"></div> - Parents <br/>' +
+	'  	<div class="color-box" style="background-color:' + POINT_OLDER_COLORS + ';"></div> - Older <br/>' +
+	'	</div>'+
+	'</div>';
 
 
 	/*
@@ -688,13 +696,15 @@ $.fn.evoAnimate = function(props) {
 		// Add line from the previously drawn point
 		if(true === drawLine) {
 			ctx.strokeStyle = false === lastStep ? LINE_PREVIOUS_COLOR : LINE_CURRENT_COLOR;
-			for(var i in parentCoords) {
-				var coords = parentCoords[i];
-				prevCoords = coordinateTransform(canvasObj, coords.x, coords.y);
-				ctx.beginPath();
-				ctx.moveTo(prevCoords.x, prevCoords.y);
-				ctx.lineTo(physicalCoords.x, physicalCoords.y);
-				ctx.stroke();
+			if(true === SHOW_PREVIOUS_LINES || (false === SHOW_PREVIOUS_LINES &&  true === lastStep)) {
+				for(var i in parentCoords) {
+					var coords = parentCoords[i];
+					prevCoords = coordinateTransform(canvasObj, coords.x, coords.y);
+					ctx.beginPath();
+					ctx.moveTo(prevCoords.x, prevCoords.y);
+					ctx.lineTo(physicalCoords.x, physicalCoords.y);
+					ctx.stroke();
+				}
 			}
 		}
 		// Increment shades
@@ -2016,6 +2026,8 @@ $.fn.evoAnimate = function(props) {
 		MESH_COLOR  = props.hasOwnProperty('meshColor') ? props.meshColor : MESH_COLOR;
 		// meshInitialDisplay
 		MESH_INITIAL_DISPLAY = props.hasOwnProperty('meshInitialDisplay') ? props.meshInitialDisplay : MESH_INITIAL_DISPLAY;
+		// showPreviousLines
+		SHOW_PREVIOUS_LINES = props.hasOwnProperty('showPreviousLines') ? props.showPreviousLines : SHOW_PREVIOUS_LINES;
 		// Function when loading is completed, as data can be loaded from ajax.
 		var loadingCompleted = function() {
 			if(playOnLoad) {
