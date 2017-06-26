@@ -1,5 +1,5 @@
 var exampleInput  = ''+
-'1;ime1;["param1","param2","param3"];1;problem1;3;["param1","param2"];'+
+'1;Algoritem1;["parameter1","parameter2","parameter3"];1;problem1;3;["parameter1","parameter2"];'+
 '{1;1;[-1,-1];00000;1;5;[3,3,3]}'+
 '{2;1;[-1,-1];00000;1;3;[2,4,1]}'+
 '{3;1;[-1,-1];00000;1;4;[6,2,5]}'+
@@ -30,8 +30,8 @@ var exampleInput  = ''+
 $(document).ready(function(){
 	evo = $('#main').evoAnimate({
 		playOnLoad: false,
-		source: exampleInput1,
-		sourceType: 'STRING',
+		//source: exampleInput1,
+		//sourceType: 'STRING',
 		//source:'http://localhost/diploma/sphere.php',
 		source:'http://localhost/diploma/jade_sphere.php',
 		//source:'http://localhost/diploma/jade_Schwefel_226.php',
@@ -41,7 +41,7 @@ $(document).ready(function(){
 		canvasSize: [300,400],
 		fps:60,
 		fullPlayback:true,
-		meshInitialDisplay: true,
+		meshInitialDisplay: false,
 	});
 });
 

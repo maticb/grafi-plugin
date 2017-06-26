@@ -58,6 +58,7 @@ $('#selector').evoAnimate({
 */
 
 
+
 $.fn.evoAnimate = function(props) {
 	// Static plugin private vars
 	var self = this;
@@ -82,7 +83,7 @@ $.fn.evoAnimate = function(props) {
 	// Under canvas html
 	var UNDER_CONTENT = ''+
 	'<div class="button">'+
-	'  <button>Prikaži legendo</button>'+
+	'  <button>Info</button>'+
 	'</div>'+
 	'<div class="content">'+
 	'Legenda:<br/>'+
@@ -243,6 +244,7 @@ $.fn.evoAnimate = function(props) {
 			divisionOriginal = Math.round(divisionOriginal);
 			if(division > 8)
 				growth = true;
+			growth = false;
 			var start = min;
 			for(var i in shadeStarts) {
 				if(growth){
@@ -1321,9 +1323,10 @@ $.fn.evoAnimate = function(props) {
 			canvasObj.meshShown = false;
 			return;
 		}
+
 		// Subtract 1, which is the left/up side border
-		var lineMarginX = parseFloat(canvasObj.width) / MESH_LINE_NUMBERS - 1;
-		var lineMarginY = parseFloat(canvasObj.height) / MESH_LINE_NUMBERS - 1;
+		var lineMarginX = parseFloat(canvasObj.width) / (MESH_LINE_NUMBERS - 1);
+		var lineMarginY = parseFloat(canvasObj.height) / (MESH_LINE_NUMBERS - 1);
 
 		var x = lineMarginX;
 		var y = lineMarginY;
