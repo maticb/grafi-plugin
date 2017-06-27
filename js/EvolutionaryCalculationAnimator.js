@@ -878,6 +878,19 @@ $.fn.evoAnimate = function(props) {
 	}
 
 	/*
+	* Draws info about dimensions being rendered on certasin canvas
+	* @param object 	canvasObj 		Object with canvas data
+	*/
+	function drawDimensionInfo(canvasObj) {
+		var ctx = canvasObj.info2LayerCtx;
+		var x = 'X' + canvasObj.xIndex;
+		var y = 'X' + canvasObj.yIndex;
+		ctx.fillStyle = '#000000';
+		ctx.fillText(x, 3, 10);
+		ctx.fillText(y, canvasObj.width - 20, canvasObj.height - 3);
+	}
+
+	/*
 	* Spawns a canvas with the given id
 	* @param integer 	id 			Canvas id
 	* @param array 		axisIds		Ids of X to put on the axis: [1, 2] defines that x1 is on the X axis and x2 on the Y axis
@@ -929,10 +942,16 @@ $.fn.evoAnimate = function(props) {
 		c.infoCanvas = $('#' + tmpID);
 		c.infoLayerCtx = c.infoCanvas[0].getContext('2d');
 
+		//Create another info layer "layer"
+		tmpID = c.canvasStack.createLayer();
+		c.info2Canvas = $('#' + tmpID);
+		c.info2LayerCtx = c.info2Canvas[0].getContext('2d');
+
 		//Create menu "layer"
 		tmpID = c.canvasStack.createLayer();
 		c.menuCanvas = $('#' + tmpID);
 		c.menuLayerCtx = c.menuCanvas[0].getContext('2d');
+
 
 		// Fill shade starts counter array with zeroes
 		c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width + 1, c.height + 1);
@@ -950,6 +969,9 @@ $.fn.evoAnimate = function(props) {
 
 		// Push into array
 		CANVAS_ARR.push(c);
+
+		// Draw info about dimensions being rendered on this canvas
+		drawDimensionInfo(c);
 		return c;
 	}
 
