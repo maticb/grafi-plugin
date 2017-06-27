@@ -1542,9 +1542,9 @@ $.fn.evoAnimate = function(props) {
 			// Button(s) on the bottom
 			// 1px is border, 31 = 1 brder + 20 font size + 5 padding on top and bottom
 			// Settings
-			drawImageOnCanvas(ctx, 'img-btn-settings', 2, canvasObj.height -31, false);
+			drawImageOnCanvas(ctx, 'img-btn-settings', 2, canvasObj.height -52, false);
 			// Mesh
-			drawImageOnCanvas(ctx, 'img-btn-mesh', canvasObj.width - 63, canvasObj.height -31, false);
+			drawImageOnCanvas(ctx, 'img-btn-mesh', canvasObj.width - 52, canvasObj.height -52, false);
 
 
 
@@ -1835,11 +1835,11 @@ $.fn.evoAnimate = function(props) {
 
 				// If menu is shown, also trigger buttons
 				if(checkMenuShown(canvas)) {
-					if(oX < cw/2 && oY > canvas.height - 30) {
+					if(oX < 52 && oY > ch - 52) {
 						settingsShowHide(canvas);
 						return;
 					}
-					if(oX > cw/2 && oY > canvas.height - 30) {
+					if(oX > cw - 52 && oY > ch - 52) {
 						drawMesh(canvas);
 						return;
 					}
@@ -1960,12 +1960,12 @@ $.fn.evoAnimate = function(props) {
 		container.append('<div class="images"></div>');
 		imgContainer = container.find('.images');
 		imgContainer.append('<img class="img-btn-menu" src="css/imgs/btn-menu.jpg" alt="Menu" />');
-		imgContainer.append('<img class="img-btn-play" src="css/imgs/btn-predvajaj.jpg" alt="Predvajaj" />');
-		imgContainer.append('<img class="img-btn-step-gen" src="css/imgs/btn-korak-gen.jpg" alt="Korak generacij" />');
-		imgContainer.append('<img class="img-btn-step-back" src="css/imgs/btn-korak-nazaj.jpg" alt="Korak nazaj" />');
-		imgContainer.append('<img class="img-btn-step-forward" src="css/imgs/btn-korak-naprej.jpg" alt="Korak naprej" />');
-		imgContainer.append('<img class="img-btn-settings" src="css/imgs/btn-nastavitve.jpg" alt="Nastavitve" />');
-		imgContainer.append('<img class="img-btn-mesh" src="css/imgs/btn-mreza.jpg" alt="Mreža" />');
+		imgContainer.append('<img class="img-btn-play" src="css/imgs/btn-play.png" alt="Predvajaj" />');
+		imgContainer.append('<img class="img-btn-step-gen" src="css/imgs/btn-step-gen.png" alt="Korak generacij" />');
+		imgContainer.append('<img class="img-btn-step-back" src="css/imgs/btn-step-backward.png" alt="Korak nazaj" />');
+		imgContainer.append('<img class="img-btn-step-forward" src="css/imgs/btn-step-forward.png" alt="Korak naprej" />');
+		imgContainer.append('<img class="img-btn-settings" src="css/imgs/btn-settings.png" alt="Nastavitve" />');
+		imgContainer.append('<img class="img-btn-mesh" src="css/imgs/btn-mesh.png" alt="Mreža" />');
 
 		// Source
 		if(!props.hasOwnProperty('source')) {
