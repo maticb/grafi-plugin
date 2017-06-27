@@ -7,7 +7,12 @@ body,html {
 
 /* Plugin css code */
 .evo-animate-container {
-
+	/* Disable selection, so we don't get canvas selection when clicking on it*/
+	-moz-user-select: none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;
+   -ms-user-select: none;
+   user-select: none;
 }
 .evo-animate-container  .evo-animate-canvas-container > canvas {
 	margin:5px;

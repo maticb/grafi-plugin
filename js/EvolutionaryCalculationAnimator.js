@@ -469,7 +469,7 @@ $.fn.evoAnimate = function(props) {
 		// Draw text on top right corner
 		ctx.fillStyle = '#000000';
 		ctx.fillText('Searched:', canvasObj.width - 50, 10);
-		ctx.fillText(num.toFixed(5), canvasObj.width - 50, 20);
+		ctx.fillText(num.toFixed(3), canvasObj.width - 50, 20);
 	}
 
 
