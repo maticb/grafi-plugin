@@ -73,9 +73,12 @@ $.fn.evoAnimate = function(props) {
 		ctx: undefined,
 		width: 300,
 		height: 300,
+		allPixels: 90000,
 		xIndex: 1, // Index of the algorithm step's X value to be displayed on this canvas's x axis
 		yIndex: 1, // Same for the y axis
 		shadeStartsCounter: [],
+		searchedPixels: [],
+		searchedAreaCounter: 0,
 		menuShown: false,
 		meshShown: false,
 		settingsShown: false,
@@ -359,10 +362,11 @@ $.fn.evoAnimate = function(props) {
 		}
 		x = Math.floor(x);
 		y = Math.floor(y);
+		// Increment searched area
+		incrementSearchedArea(canvasObj, x, y);
 		// Inline undefined checks
 		var rtrn =  (undefined === canvasObj.shadeStartsCounter[x] ? -1 :  (undefined === canvasObj.shadeStartsCounter[x][y] ? -1 : canvasObj.shadeStartsCounter[x][y]++) ) + 1;
 		return rtrn;
-
 	}
 
 	/*
@@ -424,6 +428,50 @@ $.fn.evoAnimate = function(props) {
 		for(var i in CANVAS_ARR)
 			renderShades(CANVAS_ARR[i]);
 	}
+
+	/*
+	* Cleares variables used for calulating searched area
+	* @param object 	canvasObj 		Canvas object
+	*/
+	function clearSearchedArea(canvasObj) {
+		canvasObj.searchedPixels = evolutionUtil.fill2DArray(canvasObj.searchedPixels, canvasObj.width + 1, canvasObj.height + 1);
+		canvasObj.searchedAreaCounter = 0;
+	}
+
+	/*
+	* Increments searched area, if pixel hasn't been searched yet
+	* @param object 		canvasObj 		Canvas object
+	* @param integer 		x 				X coordinate
+	* @param integer 		y 				Y coordinate
+	*/
+	function incrementSearchedArea(canvasObj, x, y) {
+		if(canvasObj.searchedPixels[x][y] === 0) {
+			canvasObj.searchedPixels[x][y] = 1;
+			canvasObj.searchedAreaCounter++;
+		}
+	}
+
+	/*
+	* Displays searched area information on all canvases
+	*/
+	function displaySearchedAreaInfo() {
+		for(var i in CANVAS_ARR)
+			drawSearchInfoOnCanvas(CANVAS_ARR[i]);
+	}
+	/*
+	* Draws search area info on one canvas
+	* @param object 		canvasObj 		Canvas object
+	*/
+	function drawSearchInfoOnCanvas(canvasObj) {
+		var num = canvasObj.searchedAreaCounter / canvasObj.allPixels * 1000;
+		var ctx =	canvasObj.infoLayerCtx;
+		ctx.clearRect(canvasObj.width - 50, 0, 50, 20);
+		// Draw text on top right corner
+		ctx.fillStyle = '#000000';
+		ctx.fillText('Searched:', canvasObj.width - 50, 10);
+		ctx.fillText(num.toFixed(5), canvasObj.width - 50, 20);
+	}
+
 
 	/*
 	* Parses entire input text (document)
@@ -845,6 +893,9 @@ $.fn.evoAnimate = function(props) {
 			c.width = size[0];
 			c.height = size[1];
 		}
+		// Calculate all pixels number, to save some computation time later
+		c.allPixels = parseInt(c.width) * parseInt(c.height);
+
 		c.xIndex = parseInt(axisIds[0]);
 		c.yIndex = parseInt(axisIds[1]);
 
@@ -953,6 +1004,11 @@ $.fn.evoAnimate = function(props) {
 	* @param boolean 	drawLines 			Indicates whether lines should be drawn or not
 	*/
 	var renderGenerations = function(lastGenId = -1, lastGenStepId = -1, drawLines = true) {
+		if(lastGenId < 0) {
+			// This should be unreachable code, checks are already done outside
+			console.log('Generation ID was below 0!');
+			return;
+		}
 		// Clear canvases
 		for(var i in CANVAS_ARR) {
 			var c = CANVAS_ARR[i];
@@ -960,79 +1016,64 @@ $.fn.evoAnimate = function(props) {
 			c.renderLayerCtx.clearRect(0, 0, c.width, c.height);
 			// Clear shades counter
 			c.shadeStartsCounter = evolutionUtil.fill2DArray(c.shadeStartsCounter, c.width + 1, c.height + 1);
+			// Clear searched pixels
+			clearSearchedArea(c);
 			if(checkTimelineShown()) {
 				renderTimeline(c);
 			}
 		}
-		if(lastGenId < 0) {
-			// TODO: This code is never used
-			// First render shades
-			renderAllCanvasesShades();
-			// Draw all shown generations every frame, remove and add according to the settings
-			if(0 === SHOWN_GENERATIONS_NUMBER) {
-				for(var i = 1; i < ANIMATION_DATA.lastGeneration; i++) {
-					stepGen(ANIMATION_DATA, i);
-				}
-			} else {
-				for(var i in RENDERED_GENERATIONS) {
-					var currentGenID = RENDERED_GENERATIONS[i];
-					stepGen(ANIMATION_DATA, currentGenID);
-				}
-			}
 
-		} else {
-			if(isShadingHistory()) {
-				// Shading for points of generations not shown (all those in front of the first generation in RENDERED_GENERATIONS)
-				var firstShownStep = GENERATION_STARTS[RENDERED_GENERATIONS[0] - 1];
-				for(var i = 0; i < firstShownStep; i++) {
-					var stepData = ANIMATION_DATA.steps[i];
-					for(var j in CANVAS_ARR) {
-						var canvasObj = CANVAS_ARR[j];
-						// X and Y axis values are stored via the i ndexes, which start with 1 (X1 = 1)
-						var x = canvasObj.xIndex - 1;
-						var y = canvasObj.yIndex - 1;
-						// Get actual values from current step data
-						var x1 = stepData.x[x];
-						var x2 = stepData.x[y];
+		if(isShadingHistory()) {
+			// Shading for points of generations not shown (all those in front of the first generation in RENDERED_GENERATIONS)
+			var firstShownStep = GENERATION_STARTS[RENDERED_GENERATIONS[0] - 1];
+			for(var i = 0; i < firstShownStep; i++) {
+				var stepData = ANIMATION_DATA.steps[i];
+				for(var j in CANVAS_ARR) {
+					var canvasObj = CANVAS_ARR[j];
+					// X and Y axis values are stored via the i ndexes, which start with 1 (X1 = 1)
+					var x = canvasObj.xIndex - 1;
+					var y = canvasObj.yIndex - 1;
+					// Get actual values from current step data
+					var x1 = stepData.x[x];
+					var x2 = stepData.x[y];
 
-						// Increment shaders
-						incrementShadeOnPoint(canvasObj, x1, x2, false);
-					}
+					// Increment shaders
+					incrementShadeOnPoint(canvasObj, x1, x2, false);
 				}
 			}
-			// First render shades
-			renderAllCanvasesShades();
-
-
-			// First render all generations except the last one
-			for(var i in RENDERED_GENERATIONS) {
-				var currentGenID = RENDERED_GENERATIONS[i];
-				if(currentGenID < lastGenId) {
-					stepGen(ANIMATION_DATA, currentGenID);
-				}
-			}
-
-			// Then render all steps in the last given generation up to the given step id
-			var startStep = GENERATION_STARTS[lastGenId - 1];
-			// If last generation step id is 0, that means all steps within that generation
-			if(lastGenStepId <= 0) {
-				if(lastGenId < GENERATION_STARTS.length)
-					lastGenStepId = GENERATION_STARTS[lastGenId];
-				else
-					lastGenStepId = ANIMATION_DATA.steps.length;
-
-			}
-
-			for(;startStep < lastGenStepId; startStep++) {
-				// We shall draw a circle on the last step
-				if(startStep !== lastGenStepId - 1) {
-					step(ANIMATION_DATA.steps[startStep], false, drawLines);
-				} else {
-					step(ANIMATION_DATA.steps[startStep], true === drawLines ? true : false, drawLines);
-				}
-			}
-			PLAY_STEP = startStep;
 		}
+		// First render shades
+		renderAllCanvasesShades();
+
+		// First render all generations except the last one
+		for(var i in RENDERED_GENERATIONS) {
+			var currentGenID = RENDERED_GENERATIONS[i];
+			if(currentGenID < lastGenId) {
+				stepGen(ANIMATION_DATA, currentGenID);
+			}
+		}
+
+		// Then render all steps in the last given generation up to the given step id
+		var startStep = GENERATION_STARTS[lastGenId - 1];
+		// If last generation step id is 0, that means all steps within that generation
+		if(lastGenStepId <= 0) {
+			if(lastGenId < GENERATION_STARTS.length)
+				lastGenStepId = GENERATION_STARTS[lastGenId];
+			else
+				lastGenStepId = ANIMATION_DATA.steps.length;
+
+		}
+
+		for(;startStep < lastGenStepId; startStep++) {
+			// We shall draw a circle on the last step
+			if(startStep !== lastGenStepId - 1) {
+				step(ANIMATION_DATA.steps[startStep], false, drawLines);
+			} else {
+				step(ANIMATION_DATA.steps[startStep], true === drawLines ? true : false, drawLines);
+			}
+		}
+		PLAY_STEP = startStep;
+		displaySearchedAreaInfo();
 	}
 
 	/*
@@ -1319,7 +1360,7 @@ $.fn.evoAnimate = function(props) {
 	function renderTimeline(canvasObj) {
 		// First clear timeline
 		clearTimeline(canvasObj);
-		var ctx = canvasObj.infoLayerCtx; // TODO: where to draw this!?
+		var ctx = canvasObj.infoLayerCtx;
 		// Get starting and ending step numbers
 		var start = calculateTimelineSteps(canvasObj.width);
 		var end = start.end;
@@ -1674,6 +1715,8 @@ $.fn.evoAnimate = function(props) {
 		// Dont clear timeline
 		var bottom =  canvasObj.height - TIMELINE_HEIGHT - TIMELINE_OFFSET_BOTTOM;
 		ctx.clearRect(0, 0, canvasObj.width, bottom);
+		// Because we cleared the info layer, draw search info again
+		drawSearchInfoOnCanvas(canvasObj);
 	}
 
 	/**
