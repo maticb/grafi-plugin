@@ -274,11 +274,10 @@ $.fn.evoAnimate = function(props) {
 				growth = true;
 			var start = min;
 			for(var i in shadeStarts) {
+				shadeStarts[i] = Math.round(start);
 				if(growth){
-					shadeStarts[i] = Math.round(start);
 					start = (division * parseInt(i + 1) );
 				} else {
-					shadeStarts[i] = Math.round(start);
 					start += divisionOriginal;
 				}
 			}

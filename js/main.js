@@ -30,6 +30,7 @@ var exampleInput  = ''+
 $(document).ready(function(){
 	evo = $('#main').evoAnimate({
 		playOnLoad: false,
+		//shownGenerations: 0,
 		//source: exampleInput2,
 		//sourceType: 'STRING',
 		//source:'http://localhost/diploma/sphere.php',
