@@ -29,7 +29,6 @@ Več grafov;
 *
 * - display				array	Optional	Defines how many (2 per canvas) and which X values to show
 * 		Shows all combinations of X-es by default e.g.: If the problem has 3 dimensions -> [x1,x2], [x1,x3], [x2,x3]
-*		Can also display fitness: [fit, x1]
 * 		Defined as an array, where the first X is numbered as "1": [1,2]  would display a canvas elements containing a graph, showing [x1,x2]
 *		To show multiple combinations define an array of arrays: [[1,2],[2,3]] -> [x1,x2] and [x2,x3]
 *
@@ -100,7 +99,6 @@ $.fn.evoAnimate = function(props) {
 	var IS_PLAYING = false; // Indicates if animation is playing
 	var IS_SETUP = false; // Indicates if canvas and other elements needed have been setup
 	var PLAY_STEP = 0; // Current step number
-	var LAST_GEN_ADD_FRAME = 0; // Stores the number of frames elasped since the last time we added a new generation to the playback
 	var LAST_ADDED_GENERATION = 1; // Id of the last generation added to the rendering
 
 	var FULL_PLAYBACK  = false; // If set to false, play button will only play animation until the end of the generation
@@ -249,7 +247,6 @@ $.fn.evoAnimate = function(props) {
 				var cell = row[j];
 				if(cell > max)
 					max = cell;
-				//TODO: test this when we get better data!
 				if(cell < min && cell > 0)
 					min = cell;
 			}
@@ -314,6 +311,10 @@ $.fn.evoAnimate = function(props) {
 		$container.find('.content .shades-legend').html(html);
 	}
 
+	/*
+	* Fills information about algorithm and problem in the proper container
+	* @param object 	canvasObj 	Canvas object
+	*/
 	function fillInfoTab(canvasObj) {
 		var $container = canvasObj.underContainer;
 		var d = ANIMATION_DATA;
@@ -481,7 +482,8 @@ $.fn.evoAnimate = function(props) {
 		rtrn.steps = []; // Algorithm steps will be stored in an array
 		// Parsing arguments
 		evolutionUtil.indexOfAll(input, ';', function(index, prev, count){
-			prev = prev > 0 ? prev + 1 : prev; // If previous index is above 0, add 1 (because that index is the ";")
+			prev = prev > 0 ? prev + 1 : prev; // If previous index is above 0,
+			// add 1 (because that index is the ";")
 			var item =  this.substring(prev, index);
 			if('' === item) {
 				return false;
@@ -503,7 +505,8 @@ $.fn.evoAnimate = function(props) {
 				return false;
 			}
 			// Special case of newline in the produced text?
-			// Trim empty strings/newlines and check if it is still empty, in that case "continue"
+			// Trim empty strings/newlines and check if it is still empty,
+			// in that case "continue"
 			if('' !== item.trim())
 				parseLine(rtrn, item);
 		});
@@ -587,7 +590,8 @@ $.fn.evoAnimate = function(props) {
 			}
 			case 1: { // generation
 				arg = parseInt(arg);
-				// Because code was first designed so that the first generation is always 1, add a safeguard here
+				// Because code was first designed so that the first generation is always 1,
+				// add a safeguard here
 				if(0 === arg && !FIRST_GEN_IS_ZERO)
 					FIRST_GEN_IS_ZERO = true;
 				if(FIRST_GEN_IS_ZERO)
@@ -604,7 +608,6 @@ $.fn.evoAnimate = function(props) {
 				break;
 			}
 			case 4: { // eval
-				// TODO: poglej kaj je eval; integer/float?
 				obj.eval = arg;
 				break;
 			}
@@ -1108,7 +1111,7 @@ $.fn.evoAnimate = function(props) {
 		if(LAST_ADDED_GENERATION <= LAST_GENERATION) {
 			// Else increment to next generation
 			LAST_ADDED_GENERATION++;
-			LAST_GEN_ADD_FRAME = 0;
+
 			//Add one generation
 			RENDERED_GENERATIONS.push(LAST_ADDED_GENERATION);
 			// Delete one, if there are more in the array than it is set in SHOWN_GENERATIONS_NUMBER
@@ -1148,7 +1151,6 @@ $.fn.evoAnimate = function(props) {
 		// Put the first generation into the proper array
 		RENDERED_GENERATIONS = [1];
 		// Reset some vars
-		LAST_GEN_ADD_FRAME = 0;
 		LAST_ADDED_GENERATION = 1;
 		PLAYBACK_STARTED_GEN = 1;
 		IS_SETUP = true;
@@ -1308,7 +1310,8 @@ $.fn.evoAnimate = function(props) {
 	function coordinateTransform(ctx, x, y) {
 		var tmpX = (x > 0 ? (ANIMATION_DATA.problemRange / x) : 0);
 		var tmpY = (y > 0 ? (ANIMATION_DATA.problemRange / y) : 0);
-		// Physical coordinates cannot be negative, if problem range goes below 0 add the difference to produce only positive numbers
+		// Physical coordinates cannot be negative,
+		// if problem range goes below 0 add the difference to produce only positive numbers
 		if(ANIMATION_DATA.problemLowestNum < 0) {
 			var diff = 0 - ANIMATION_DATA.problemLowestNum;
 			tmpX = ANIMATION_DATA.problemRange / (x + diff);

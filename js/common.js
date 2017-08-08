@@ -45,6 +45,7 @@ evolutionUtil.parseArray = function(input){
 	return JSON.parse(input);
 }
 
+/* TODO: UNUSED FUNCTION! REMOVE? */
 /*
 * Check if object has property and returns it, else undefined
 * Also parses property into a type if given
@@ -52,7 +53,7 @@ evolutionUtil.parseArray = function(input){
 * @param string 	propName 	Property name
 * @param string 	propType 	Property type
 */
-evolutionUtil.getProp = function(obj, propName, propType = null) {
+/*evolutionUtil.getProp = function(obj, propName, propType = null) {
 
 	if(obj.hasOwnProperty(propName)) {
 		var rtrn = obj[propName];
@@ -62,7 +63,7 @@ evolutionUtil.getProp = function(obj, propName, propType = null) {
 		return rtrn;
 	}
 	return undefined;
-}
+}*/
 
 /*
 * Clones object
