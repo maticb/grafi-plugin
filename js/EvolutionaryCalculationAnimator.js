@@ -199,7 +199,7 @@ $.fn.evoAnimate = function(props) {
 			}
 
 			TIMELINE_MAX_FITNESS = TIMELINE_MAX_FITNESS < step.fitness ? step.fitness : TIMELINE_MAX_FITNESS;
-			TIMELINE_MIN_FITNESS = TIMELINE_MAX_FITNESS > step.fitness ? step.fitness : TIMELINE_MIN_FITNESS;
+			TIMELINE_MIN_FITNESS = TIMELINE_MIN_FITNESS > step.fitness ? step.fitness : TIMELINE_MIN_FITNESS;
 		}
 
 		// Set timeline fitness span and converted fitness
