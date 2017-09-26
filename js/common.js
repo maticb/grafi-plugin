@@ -36,35 +36,6 @@ evolutionUtil.indexOfAll = function(str, val, callback) {
 	}
 }
 
-
-/*
-* Universal function that parses array from argument string
-* @param string 	input 		String (JSON) of the given argument
-*/
-evolutionUtil.parseArray = function(input){
-	return JSON.parse(input);
-}
-
-/* TODO: UNUSED FUNCTION! REMOVE? */
-/*
-* Check if object has property and returns it, else undefined
-* Also parses property into a type if given
-* @param object 	obj 		Any given object
-* @param string 	propName 	Property name
-* @param string 	propType 	Property type
-*/
-/*evolutionUtil.getProp = function(obj, propName, propType = null) {
-
-	if(obj.hasOwnProperty(propName)) {
-		var rtrn = obj[propName];
-		if('integer' === propType)
-			return parseInt(rtrn);
-		// If no proptype is given
-		return rtrn;
-	}
-	return undefined;
-}*/
-
 /*
 * Clones object
 * @param object 	obj 		Any given object
