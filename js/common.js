@@ -37,6 +37,14 @@ evolutionUtil.indexOfAll = function(str, val, callback) {
 }
 
 /*
+* Universal function that parses array from argument string
+* @param string 	input 		String (JSON) of the given argument
+*/
+evolutionUtil.parseArray = function(input){
+	return JSON.parse(input);
+}
+
+/*
 * Clones object
 * @param object 	obj 		Any given object
 */
